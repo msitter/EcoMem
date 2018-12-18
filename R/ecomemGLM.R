@@ -1,7 +1,6 @@
 #####################################################################
 #####################################################################
-# Ecological Memory Function - EcoMem()
-# May 14, 2018
+# Ecological memory GLM function - ecomemGLM(...)
 #####################################################################
 #####################################################################
 
@@ -10,30 +9,29 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
                      starting=NULL,smooth=NULL,n.post=1000,thin=10,
                      burn.in=5000,n.step=5,n.chains=3,parallel=TRUE,
                      max.cpu=NULL,inputs.only=FALSE,...){
-  
-  source("EcoMemGLMMCMC.R")
-  
+
   options(stringsAsFactors=FALSE)
-  
+  snow::setDefaultClusterOptions(type="SOCK")
+
   ######################################################################
   #### Check for unused arguments ######################################
   ######################################################################
-  
+
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
   for(i in elip.args){
     if(! i %in% formal.args)
       warning("'",i, "' is not an argument")
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Parse formula inputs ############################################
   ######################################################################
-  
+
   if(missing(formula)){stop("model formula must be specified")}
-  
+
   if(class(formula) == "formula"){
     resp = as.character(formula[[2]])
     main = attr(terms(formula),"term.labels")[attr(terms(formula),"order")==1]
@@ -53,13 +51,13 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
   } else {
     stop("model formula is misspecified")
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Define lagged covariates ########################################
   ######################################################################
-  
+
   # Check inputs
   if(missing(mem.vars)){stop("no memory variable specified")}
   if (!isTRUE(is.character(mem.vars))){stop("mem.vars must be a character")}
@@ -69,9 +67,9 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
   if(!is.na(groupID)){
     if (!isTRUE(is.character(groupID))){stop("groupID must be a character")}
   }
-  
+
   p.mem = length(mem.vars)
-  
+
   # Check offset
   if(!is.null(offset)){
     if(!isTRUE(is.character(offset))){stop("offset must be a character")}
@@ -82,14 +80,14 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
       if(!isTRUE(all(data[,offset]==floor(data[,offset])))){stop("offset must integer for Binomial data")}
     }
   }
-  
+
   # Define offset
   if(!is.null(offset)){
     offset = data[,offset]
   } else {
     offset = rep(1,nrow(data))
   }
-  
+
   # Check var.type
   if (!is.null(var.type)){
     if (!all(var.type%in%c("C","D"))){stop("one or more memory covariates are mis-categorized")}
@@ -102,13 +100,13 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
   } else {
     var.type = rep("C",p.mem)
   }
-  
+
   aux.vars = main[!main%in%mem.vars]
   mem.vars.C = mem.vars[var.type=="C"]
   nC = length(mem.vars.C)
   mem.vars.D = mem.vars[var.type=="D"]
   nD = length(mem.vars.D)
-  
+
   # Check discrete vars and calculate counts
   if (nD > 0){
     if (!all(data[,mem.vars.D]%in%c(0,1))){stop("Non-binary discrete memory covariates specified")}
@@ -121,7 +119,7 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
     }
     colnames(D) = mem.vars.D
   }
-  
+
   # Check L input
   if(missing(L)){stop("L must be specified")}
   check.L = length(L)
@@ -131,7 +129,7 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
     if (check.L!=p.mem){stop("L is missing for one or more memory covariates")}
   }
   names(L) = mem.vars
-  
+
   # Check if fixed values are provided for smoothing parameters
   if (!is.null(smooth)){
     if (length(smooth)==1){
@@ -141,9 +139,9 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
         stop("smoothing parameter is missing for one or more memory covariates")
       }
     }
-    names(smooth) = mem.vars 
+    names(smooth) = mem.vars
   }
-  
+
   # Define groups
   if (is.na(groupID)){
     group = rep(1,nrow(data))
@@ -152,13 +150,13 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
   } else {
     group = data[,groupID]
     group.idx = sort(unique(group))
-    n.group = length(group.idx) 
+    n.group = length(group.idx)
   }
-  
+
   data = data[order(data[,groupID],data[,timeID]),]
   data[,c(mem.vars.C,aux.vars)] = scale(data[,c(mem.vars.C,aux.vars)])
   mod.data = data
-  
+
   # Define function to calculate time since disturbance
   tsD = function(t,v,max,n.col){
     tmp = outer(t,t[v==1],"-")
@@ -166,7 +164,7 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
     tmp = cbind(tmp,matrix(9999,nrow(tmp),n.col-ncol(tmp)))
     return(tmp)
   }
-  
+
   # Define function to weight discrete data
   wtD = function(x,w){
     tmp = matrix(w[x+1],dim(x))
@@ -174,7 +172,7 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
     wtd.val = apply(tmp,1,sum)
     return(wtd.val)
   }
-  
+
   x.mem.all.obs = lapply(1:length(L),function(i){
     do.call("rbind",lapply(1:n.group,function(j){
       tmp.dat = data[data[,groupID]==group.idx[j],]
@@ -201,21 +199,21 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
       return(x.lag.mat)
     }))
   })
-  
+
   drop.idx = sort(unique(unlist(lapply(x.mem.all.obs,function(x){
     which(apply(x,1,function(y)any(is.na(y)))==T)
   }))))
-  
+
   mod.data[drop.idx,"resp"] = NA
   data = data[-drop.idx,]
-  
+
   # Check response type for Poisson data
   if (family=="poisson"){
     if(!isTRUE(all(data[,resp]==
-                   floor(data[,resp])))){stop("response variable must be 
-                                              integer for poisson family")} 
+                   floor(data[,resp])))){stop("response variable must be
+                                              integer for poisson family")}
   }
-  
+
   n = nrow(data)
   x.mem = lapply(x.mem.all.obs,function(x){
     x[-drop.idx,]
@@ -227,22 +225,22 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
     warning("no data for one or more groups")
   }
   timeframe = min(data[,timeID]):max(data[,timeID])
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Create model inputs #############################################
   ######################################################################
-  
+
   #### Create weight matrices ########################################
-  
+
   W = lapply(1:p.mem,function(i){
     rep(1,L[i]+1)/(L[i]+1)
   })
   names(W) = mem.vars
-  
+
   #### Create data inputs ############################################
-  
+
   ### Form design matrix ###
   X = model.matrix(formula,data)
   p = ncol(X)
@@ -257,7 +255,7 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
   if (inter==TRUE){
     X[,inter.terms] = sapply(1:length(inter.vars),function(j){
       apply(X[,inter.vars[[j]]],1,prod)
-    }) 
+    })
   }
   storage.mode(X) = "double"
   ### Memory function inputs ###
@@ -277,7 +275,7 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
   }
   # Define smoothing parameters (if provided)
   if(!is.null(smooth)){
-    
+
     inputs = list(y=as.double(data[,resp]),family=family,X.fix=X,n=as.integer(n),
                   p=as.integer(p),mem.vars=as.character(mem.vars),
                   var.type=as.character(var.type),offset=offset,
@@ -287,9 +285,9 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
                   n.post=as.integer(n.post),thin=as.integer(thin),
                   burn.in=as.integer(burn.in),n.chains=as.integer(n.chains),
                   n.step=as.integer(n.step))
-    
+
   } else {
-    
+
     inputs = list(y=as.double(data[,resp]),family=family,X.fix=X,n=as.integer(n),
                   p=as.integer(p),mem.vars=as.character(mem.vars),
                   var.type=as.character(var.type),offset=offset,
@@ -298,33 +296,33 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
                   inter.vars=inter.vars,n.post=as.integer(n.post),thin=as.integer(thin),
                   burn.in=as.integer(burn.in),n.chains=as.integer(n.chains),
                   n.step=as.integer(n.step))
-    
+
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Define priors ###################################################
   ######################################################################
-  
+
   nu = 4
   A = 0.1
   sig2.0 = 1e07
-  
+
   priors = list(nu=nu,A=A,sig2.0=sig2.0)
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Generate starting values ########################################
   ######################################################################
-  
+
   # Initial starting value check
   if(!is.null(starting) & length(starting)!=n.chains){
     starting = NA
     warning("Starting values not provided for each MCMC chain,\nreverting to default starting values")
   }
-  
+
   if (!is.null(starting)){
     # Check starting value inputs
     if(!is.list(starting)){stop("starting values must be specified as a list")}
@@ -439,7 +437,7 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
         if (inter==TRUE){
           X.start[,inter.terms] = sapply(1:length(inter.vars),function(j){
             apply(X.start[,inter.vars[[j]]],1,prod)
-          }) 
+          })
         }
       } else {
         mem = NULL
@@ -452,24 +450,24 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
       }
     })
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Define MCMC inputs ##############################################
   ######################################################################
-  
+
   mcmc.inputs = lapply(1:n.chains,function(i){
     list(inputs=inputs,priors=priors,starting=starting[[i]],chain=i)
   })
   names(mcmc.inputs) = paste("chain",1:n.chains,sep="")
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Summarize inputs ################################################
   ######################################################################
-  
+
   if(!isTRUE(inputs.only)){
     cat("\n","---Starting MCMC---","\n",
         "Number of chains:",n.chains,"\n",
@@ -481,7 +479,7 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
         "Memory variables:",mem.vars,"\n",
         "Number of groups:",n.group,"\n",
         "Study period time points:",timeframe[1],
-        "to",timeframe[length(timeframe)],"\n") 
+        "to",timeframe[length(timeframe)],"\n")
   } else {
     cat("\n","---Generating MCMC inputs---","\n",
         "Running in parallel:",parallel,"\n",
@@ -492,15 +490,15 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
         "Memory variables:",mem.vars,"\n",
         "Number of groups:",n.group,"\n",
         "Study period time points:",timeframe[1],
-        "to",timeframe[length(timeframe)],"\n") 
+        "to",timeframe[length(timeframe)],"\n")
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Run MCMC ########################################################
   ######################################################################
-  
+
   if (!isTRUE(inputs.only)){
     if (isTRUE(parallel)){
       cat("\n","track progress using 'track-ecomem.txt'","\n")
@@ -523,13 +521,13 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
       })
     }
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Return output ###################################################
   ######################################################################
-  
+
   if (isTRUE(inputs.only)){
     return(list(inputs=mcmc.inputs,data=mod.data,n=n))
   } else {
@@ -539,7 +537,7 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
       return(list(post.samps=mod.out[[1]],data=mod.data,n=n))
     }
   }
-  
+
   ######################################################################
-  
+
 } # End function

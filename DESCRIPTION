@@ -1,9 +1,35 @@
 Package: EcoMem
-Title: What the Package Does (one line, title case)
+Title: Functions to Estimate Ecological Memory
 Version: 0.0.0.9000
-Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Authors@R: as.person(c(
+    "Malcolm Itter <malcolm.itter@helsinki.fi> [aut, cre]",
+    "Jarno Vanhatalo <jarno.vanhatalo@helsinki.fi> [aut]",
+    "Andrew Finley <finleya@msu.edu> [aut]"
+  ))
+Description: Quantifies ecological memory functions for a subset 
+    of covariates within a linear or generalized linear model 
+    using penalized splines. Ecological memory functions 
+    indicate the length of persistent responses and the 
+    relative importance of past environmental conditions of 
+    current ecosystem function. Memory functions are used to 
+    generate weighted covariate values reflecting the 
+    cumulative effect of environmental conditions over time. 
+    Functions accept continuous, count, and proportional 
+    response data and continous as well as binary (e.g., event 
+    data) covariate observations. Memory functions, regression 
+    coefficients, and residual error parameters are estimated 
+    as part of a Bayesian hierarchical model, which utilizes 
+    Markov chain Monte Carlo (MCMC) simulation to sample from 
+    the joint posterior distibution.
 Depends: R (>= 3.5.1)
-License: What license is it under?
 Encoding: UTF-8
 LazyData: true
+License: GPL (>= 2)
+Imports: 
+    mgcv,
+    snow,
+    snowfall,
+    rlecuyer
+Suggests: 
+    coda,
+    ggplot2

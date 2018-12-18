@@ -1,39 +1,37 @@
 #####################################################################
 #####################################################################
-# Ecological Memory Function - EcoMem()
-# May 14, 2018
+# Ecological memory function - ecomem(...)
 #####################################################################
 #####################################################################
 
-ecomem = function(formula,data=parent.frame(),mem.vars,
+ecomem = function(formula,data,mem.vars,
                   var.type=NULL,L,timeID,groupID=NA,starting=NULL,
                   smooth=NULL,n.post=1000,thin=10,burn.in=5000,
                   n.step=5,n.chains=3,parallel=TRUE,max.cpu=NULL,
                   inputs.only=FALSE,...){
-  
-  source("ecomemMCMC.R")
-  
+
   options(stringsAsFactors=FALSE)
-  
+  snow::setDefaultClusterOptions(type="SOCK")
+
   ######################################################################
   #### Check for unused arguments ######################################
   ######################################################################
-  
+
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
   for(i in elip.args){
     if(! i %in% formal.args)
       warning("'",i, "' is not an argument")
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Parse formula inputs ############################################
   ######################################################################
-  
+
   if(missing(formula)){stop("model formula must be specified")}
-  
+
   if(class(formula) == "formula"){
     resp = as.character(formula[[2]])
     main = attr(terms(formula),"term.labels")[attr(terms(formula),"order")==1]
@@ -53,25 +51,63 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
   } else {
     stop("model formula is misspecified")
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Define lagged covariates ########################################
   ######################################################################
-  
+
   # Check inputs
-  if(missing(mem.vars)){stop("no memory variable specified")}
-  if (!isTRUE(is.character(mem.vars))){stop("mem.vars must be a character")}
+  if(missing(data)){stop("no model data frame specified")}
+  if(missing(mem.vars)){
+    mem.vars = NULL
+    warning("no memory variables specified")
+  } else {
+    if (!isTRUE(is.character(mem.vars))){stop("mem.vars must be a character")}
+    }
   if(missing(timeID)){stop("time variable must be specified")}
   if (!isTRUE(is.character(timeID))){stop("timeID must be a character")}
   if(!isTRUE(all(data[,timeID]==floor(data[,timeID])))){stop("time variable must only contain integer values")}
   if(!is.na(groupID)){
     if (!isTRUE(is.character(groupID))){stop("groupID must be a character")}
   }
-  
+
   p.mem = length(mem.vars)
-  
+
+  # Check L input
+  if(missing(L)){stop("L must be specified")}
+  check.L = length(L)
+  if (check.L==1){
+    L = rep(L,p.mem)
+  } else {
+    if (check.L!=p.mem){stop("L is missing for one or more memory covariates")}
+  }
+  names(L) = mem.vars
+
+  # Check if fixed values are provided for smoothing parameters
+  if (!is.null(smooth)){
+    if (length(smooth)==1){
+      smooth = rep(smooth,p.mem)
+    } else {
+      if (length(smooth)!=p.mem){
+        stop("smoothing parameter is missing for one or more memory covariates")
+      }
+    }
+    names(smooth) = mem.vars
+  }
+
+  # Define groups
+  if (is.na(groupID)){
+    group = rep(1,nrow(data))
+    group.idx = 1
+    n.group = 1
+  } else {
+    group = data[,groupID]
+    group.idx = sort(unique(group))
+    n.group = length(group.idx)
+  }
+
   # Check var.type
   if (!is.null(var.type)){
     if (!all(var.type%in%c("C","D"))){stop("one or more memory covariates are mis-categorized")}
@@ -84,13 +120,13 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
   } else {
     var.type = rep("C",p.mem)
   }
-  
+
   aux.vars = main[!main%in%mem.vars]
   mem.vars.C = mem.vars[var.type=="C"]
   nC = length(mem.vars.C)
   mem.vars.D = mem.vars[var.type=="D"]
   nD = length(mem.vars.D)
-  
+
   # Check discrete vars and calculate counts
   if (nD > 0){
     if (!all(data[,mem.vars.D]%in%c(0,1))){stop("Non-binary discrete memory covariates specified")}
@@ -103,44 +139,11 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
     }
     colnames(D) = mem.vars.D
   }
-  
-  # Check L input
-  if(missing(L)){stop("L must be specified")}
-  check.L = length(L)
-  if (check.L==1){
-    L = rep(L,p.mem)
-  } else {
-    if (check.L!=p.mem){stop("L is missing for one or more memory covariates")}
-  }
-  names(L) = mem.vars
-  
-  # Check if fixed values are provided for smoothing parameters
-  if (!is.null(smooth)){
-    if (length(smooth)==1){
-      smooth = rep(smooth,p.mem)
-    } else {
-      if (length(smooth)!=p.mem){
-        stop("smoothing parameter is missing for one or more memory covariates")
-      }
-    }
-    names(smooth) = mem.vars 
-  }
-  
-  # Define groups
-  if (is.na(groupID)){
-    group = rep(1,nrow(data))
-    group.idx = 1
-    n.group = 1
-  } else {
-    group = data[,groupID]
-    group.idx = sort(unique(group))
-    n.group = length(group.idx) 
-  }
-  
+
   data = data[order(data[,groupID],data[,timeID]),]
   data[,c(mem.vars.C,aux.vars)] = scale(data[,c(mem.vars.C,aux.vars)])
   mod.data = data
-  
+
   # Define function to calculate time since disturbance
   tsD = function(t,v,max,n.col){
     tmp = outer(t,t[v==1],"-")
@@ -148,7 +151,7 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
     tmp = cbind(tmp,matrix(9999,nrow(tmp),n.col-ncol(tmp)))
     return(tmp)
   }
-  
+
   # Define function to weight discrete data
   wtD = function(x,w){
     tmp = matrix(w[x+1],dim(x))
@@ -156,7 +159,7 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
     wtd.val = apply(tmp,1,sum)
     return(wtd.val)
   }
-  
+
   x.mem.all.obs = lapply(1:length(L),function(i){
     do.call("rbind",lapply(1:n.group,function(j){
       tmp.dat = data[data[,groupID]==group.idx[j],]
@@ -183,11 +186,11 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
       return(x.lag.mat)
     }))
   })
-  
+
   drop.idx = sort(unique(unlist(lapply(x.mem.all.obs,function(x){
     which(apply(x,1,function(y)any(is.na(y)))==T)
   }))))
-  
+
   mod.data[drop.idx,"resp"] = NA
   data = data[-drop.idx,]
   n = nrow(data)
@@ -200,22 +203,22 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
     warning("no data for one or more groups")
   }
   timeframe = min(data[,timeID]):max(data[,timeID])
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Create model inputs #############################################
   ######################################################################
-  
+
   #### Create weight matrices ########################################
-  
+
   W = lapply(1:p.mem,function(i){
     rep(1,L[i]+1)/(L[i]+1)
   })
   names(W) = mem.vars
-  
+
   #### Create data inputs ############################################
-  
+
   ### Form design matrix ###
   X = model.matrix(formula,data)
   p = ncol(X)
@@ -230,7 +233,7 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
   if (inter==TRUE){
     X[,inter.terms] = sapply(1:length(inter.vars),function(j){
       apply(X[,inter.vars[[j]]],1,prod)
-    }) 
+    })
   }
   storage.mode(X) = "double"
   ### Memory function inputs ###
@@ -269,33 +272,33 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
                  burn.in=as.integer(burn.in),n.chains=as.integer(n.chains),
                  n.step=as.integer(n.step))
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Define priors ###################################################
   ######################################################################
-  
+
   nu = 4
   A = 0.1
   a.y = 1e-05
   b.y = 1e05
   sig2.0 = 1e07
-  
+
   priors = list(nu=nu,A=A,a.y=a.y,b.y=b.y,sig2.0=sig2.0)
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Generate starting values ########################################
   ######################################################################
-  
+
   # Initial starting value check
   if(!is.null(starting) & length(starting)!=n.chains){
     starting = NA
     warning("Starting values not provided for each MCMC chain,\nreverting to default starting values")
   }
-  
+
   if (!is.null(starting)){
     # Check starting value inputs
     if(!is.list(starting)){stop("starting values must be specified as a list")}
@@ -402,7 +405,7 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
         if (inter==TRUE){
           X.start[,inter.terms] = sapply(1:length(inter.vars),function(j){
             apply(X.start[,inter.vars[[j]]],1,prod)
-          }) 
+          })
         }
       } else {
         mem = NULL
@@ -415,24 +418,24 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
       }
     })
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Define MCMC inputs ##############################################
   ######################################################################
-  
+
   mcmc.inputs = lapply(1:n.chains,function(i){
     list(inputs=inputs,priors=priors,starting=starting[[i]],chain=i)
   })
   names(mcmc.inputs) = paste("chain",1:n.chains,sep="")
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Summarize inputs ################################################
   ######################################################################
-  
+
   if(!isTRUE(inputs.only)){
     cat("\n","---Starting MCMC---","\n",
         "Number of chains:",n.chains,"\n",
@@ -443,7 +446,7 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
         "Memory variables:",mem.vars,"\n",
         "Number of groups:",n.group,"\n",
         "Study period time points:",timeframe[1],
-        "to",timeframe[length(timeframe)],"\n") 
+        "to",timeframe[length(timeframe)],"\n")
   } else {
     cat("\n","---Generating MCMC inputs---","\n",
         "Running in parallel:",parallel,"\n",
@@ -453,44 +456,44 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
         "Memory variables:",mem.vars,"\n",
         "Number of groups:",n.group,"\n",
         "Study period time points:",timeframe[1],
-        "to",timeframe[length(timeframe)],"\n") 
+        "to",timeframe[length(timeframe)],"\n")
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Run MCMC ########################################################
   ######################################################################
-  
+
   if (!isTRUE(inputs.only)){
     if (isTRUE(parallel)){
       cat("\n","track progress using 'track-ecomem.txt'","\n")
       if(!is.null(max.cpu)){
         snowfall::sfInit(parallel=T,cpus=max.cpu,slaveOutfile="track-ecomem.txt")
         snowfall::sfClusterSetupRNG()
-        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomemMCMC)
+        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomem::ecomemMCMC)
         snowfall::sfStop()
         names(mod.out) = paste("chain",1:n.chains,sep="")
       } else {
         snowfall::sfInit(parallel=T,cpus=n.chains,slaveOutfile="track-ecomem.txt")
         snowfall::sfClusterSetupRNG()
-        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomemMCMC)
+        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomem::ecomemMCMC)
         snowfall::sfStop()
         names(mod.out) = paste("chain",1:n.chains,sep="")
       }
     } else {
       mod.out = lapply(mcmc.inputs,function(x){
-        ecomemMCMC(x)
+        ecomem::ecomemMCMC(x)
       })
     }
   }
-  
+
   ######################################################################
-  
+
   ######################################################################
   #### Return output ###################################################
   ######################################################################
-  
+
   if (isTRUE(inputs.only)){
     return(list(inputs=mcmc.inputs,data=mod.data,n=n))
   } else {
@@ -500,7 +503,7 @@ ecomem = function(formula,data=parent.frame(),mem.vars,
       return(list(post.samps=mod.out[[1]],data=mod.data,n=n))
     }
   }
-  
+
   ######################################################################
-  
+
 } # End function
