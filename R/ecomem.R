@@ -122,6 +122,13 @@ ecomem = function(formula,data,mem.vars,
   }
 
   aux.vars = main[!main%in%mem.vars]
+  aux.var.class = sapply(data[,aux.vars],class)
+  if (!all(aux.var.class%in%c("character","factor",
+                              "integer","numeric"))){
+    stop("covariates must be numeric or categorical")
+  }
+  aux.vars.D = aux.vars[aux.var.class%in%c("character","factor")]
+  aux.vars.C = aux.vars[!aux.vars%in%aux.var.D]
   mem.vars.C = mem.vars[var.type=="C"]
   nC = length(mem.vars.C)
   mem.vars.D = mem.vars[var.type=="D"]
@@ -141,7 +148,8 @@ ecomem = function(formula,data,mem.vars,
   }
 
   data = data[order(data[,groupID],data[,timeID]),]
-  data[,c(mem.vars.C,aux.vars)] = scale(data[,c(mem.vars.C,aux.vars)])
+  data[,c(mem.vars.C,aux.vars)] =
+    scale(data[,c(mem.vars.C,aux.vars)],center=FALSE)
   mod.data = data
 
   # Define function to calculate time since disturbance
@@ -474,6 +482,7 @@ ecomem = function(formula,data,mem.vars,
         mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomem::ecomemMCMC)
         snowfall::sfStop()
         names(mod.out) = paste("chain",1:n.chains,sep="")
+
       } else {
         snowfall::sfInit(parallel=T,cpus=n.chains,slaveOutfile="track-ecomem.txt")
         snowfall::sfClusterSetupRNG()
@@ -482,9 +491,9 @@ ecomem = function(formula,data,mem.vars,
         names(mod.out) = paste("chain",1:n.chains,sep="")
       }
     } else {
-      mod.out = lapply(mcmc.inputs,function(x){
+      mod.out = coda::mcmc.list(lapply(mcmc.inputs,function(x){
         ecomem::ecomemMCMC(x)
-      })
+      }))
     }
   }
 
@@ -495,15 +504,19 @@ ecomem = function(formula,data,mem.vars,
   ######################################################################
 
   if (isTRUE(inputs.only)){
-    return(list(inputs=mcmc.inputs,data=mod.data,n=n))
+    out = list(inputs=mcmc.inputs,data=mod.data,n=n)
   } else {
     if (n.chains>1){
-      return(list(post.samps=mod.out,data=mod.data,n=n))
+      out = list(post.samps=mod.out,data=mod.data,n=n)
     } else {
-      return(list(post.samps=mod.out[[1]],data=mod.data,n=n))
+      out = list(post.samps=mod.out[[1]],data=mod.data,n=n)
     }
   }
 
+  class(out) = "ecomem"
+
   ######################################################################
+
+  return(out)
 
 } # End function

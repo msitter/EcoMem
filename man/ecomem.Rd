@@ -1,11 +1,10 @@
 \name{ecomem}
 \alias{ecomem}
-\title{Ecological memory function}
+\title{Function for quantifying ecological memory within a univariate regression model}
 
 \description{Estimates ecological memory functions for a specified subset of covariates based
-on a continuous response using a linear model framework. The function is a wrapper to
-\code{\link{ecomemMCMC}} which implements Markov chain Monte Carlo (MCMC) simulation to fit the
-ecological memory model.}
+on a continuous response within a linear model framework. The function is a wrapper to
+\code{\link{ecomemMCMC}} which implements Markov chain Monte Carlo (MCMC) simulation to fit a Bayesian hierarchical model estimating ecological memory.}
 
 \usage{
 ecomem(formula, data, mem.vars, var.type = NULL, L, timeID, groupID = NA,
@@ -70,14 +69,45 @@ ecomem(formula, data, mem.vars, var.type = NULL, L, timeID, groupID = NA,
   \item{...}{currently no additional arguments.}
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+Explanatory variable observations for \code{L} time points prior to the initial
+response are needed to initialize the regression model when estimating ecological
+memory functions for a subset of covariates. If explanatory variable observations
+are available prior to the initial response, the first \code{\link[base]{max(L)}}
+responses for each group (if \code{groupID} is non-\code{NULL}) within \code{data}
+should be set to \code{NA}. Otherwise, the first \code{\link[base]{max(L)}}
+response observations within each group will not be evaluated as part of the
+regression model.
+
+Unequally-spaced time points are not supported. The \code{timeID}
+variable should include equally-spaced, sequential time points within each group.
+Model time periods for different groups may be non-overlapping, but the spacing
+of time points \emph{must} be consistent among groups.
+
+\code{NA} values are not supported in explanatory, time index, and group
+index variables nor beyond the first \code{\link[base]{max(L)}} response
+variable values within a group.
+
+If \code{var.type = "D"}, covariate must consist of binary (0/1) integer values
+with 1 indicating the occurrence of an event thought to impact the response
+variable (e.g., disturbance/stress event) and 0 indicating no event occurrence.
 }
 \value{
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
+An object of class \code{ecomem}, which is a list with the following elements:
+\item{post.samps}{a list of posterior samples with length equal to \code{n.chains}.
+Each element is a named list with names corresponding to model parameters
+(\code{beta}, \code{sig.y}, \code{eta}, \code{w}, \code{X.tilde}, \code{tau.sq}).
+Returned only if \code{inputs.only = FALSE} (default).}
+\item{inputs}{a list of MCMC inputs with length equal to \code{n.chains}. Each
+element is a named list containing \code{inputs}, \code{priors}, and
+\code{starting} to be passed to \code{\link{ecomemMCMC}}. Returned only if
+\code{inputs.only = TRUE}.}
+\item{data}{a data frame containing data used to fit the regression model including
+a response variable with the first \code{\link[base]{max(L)}} within each group set
+to \code{NA} and scaled values for all continuous explanatory variables.}
+\item{n}{an integer value indicating the number of reponse observations used to fit
+the regression model across all groups.}
+\item{scale.factors}{a named numeric vector containing the factors used to scale
+explanatory variables. Names correspond to model variables.}
 }
 \references{
 %% ~put references to the literature/web site here ~
