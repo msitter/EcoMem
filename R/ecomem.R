@@ -122,13 +122,16 @@ ecomem = function(formula,data,mem.vars,
   }
 
   aux.vars = main[!main%in%mem.vars]
-  aux.var.class = sapply(data[,aux.vars],class)
-  if (!all(aux.var.class%in%c("character","factor",
-                              "integer","numeric"))){
-    stop("covariates must be numeric or categorical")
-  }
-  aux.vars.D = aux.vars[aux.var.class%in%c("character","factor")]
-  aux.vars.C = aux.vars[!aux.vars%in%aux.var.D]
+  aux.vars.C = aux.vars[which(apply(as.matrix(data[,aux.vars]),
+                                    2,class)%in%c("numeric","integer"))]
+  aux.vars.D = aux.vars[!aux.vars%in%aux.vars.C]
+  # aux.var.class = apply(as.matrix(data[,aux.vars]),2,class)
+  # if (!all(aux.var.class%in%c("character","factor",
+  #                             "integer","numeric"))){
+  #   stop("covariates must be numeric or categorical")
+  # }
+  # aux.vars.D = aux.vars[aux.var.class%in%c("character","factor")]
+  # aux.vars.C = aux.vars[!aux.vars%in%aux.vars.D]
   mem.vars.C = mem.vars[var.type=="C"]
   nC = length(mem.vars.C)
   mem.vars.D = mem.vars[var.type=="D"]
@@ -148,8 +151,14 @@ ecomem = function(formula,data,mem.vars,
   }
 
   data = data[order(data[,groupID],data[,timeID]),]
-  data[,c(mem.vars.C,aux.vars)] =
-    scale(data[,c(mem.vars.C,aux.vars)],center=FALSE)
+  scaled.X = scale(dat[,c(mem.vars.C,aux.vars.C)],center=FALSE)
+  scale.factors = attr(scaled.X,"scaled:scale")
+  if (dim(scaled.X)[2]==1){
+    data[,c(mem.vars.C,aux.vars.C)] = as.numeric(scaled.X)
+    names(scale.factors) = c(mem.vars.C,aux.vars.C)
+  } else {
+    data[,c(mem.vars.C,aux.vars.C)] = scaled.X
+  }
   mod.data = data
 
   # Define function to calculate time since disturbance
@@ -218,32 +227,16 @@ ecomem = function(formula,data,mem.vars,
   #### Create model inputs #############################################
   ######################################################################
 
-  #### Create weight matrices ########################################
-
-  W = lapply(1:p.mem,function(i){
-    rep(1,L[i]+1)/(L[i]+1)
-  })
-  names(W) = mem.vars
-
   #### Create data inputs ############################################
 
   ### Form design matrix ###
   X = model.matrix(formula,data)
   p = ncol(X)
-  # Update columns with memory variables
-  X[,mem.vars] = sapply(1:p.mem,function(j){
-    if (var.type[j]=="C"){
-      x.mem[[j]]%*%W[[j]]
-    } else {
-      wtD(x.mem[[j]],W[[j]])
-    }
-  })
-  if (inter==TRUE){
-    X[,inter.terms] = sapply(1:length(inter.vars),function(j){
-      apply(X[,inter.vars[[j]]],1,prod)
-    })
-  }
   storage.mode(X) = "double"
+  ##
+  ## Need to deal with interactions between
+  ## categorical auxiliary variables and memory variables
+  ##
   ### Memory function inputs ###
   # Define basis functions
   bf = list()
@@ -504,12 +497,15 @@ ecomem = function(formula,data,mem.vars,
   ######################################################################
 
   if (isTRUE(inputs.only)){
-    out = list(inputs=mcmc.inputs,data=mod.data,n=n)
+    out = list(inputs=mcmc.inputs,data=mod.data,n=n,
+               scale.factors=scale.factors)
   } else {
     if (n.chains>1){
-      out = list(post.samps=mod.out,data=mod.data,n=n)
+      out = list(post.samps=mod.out,data=mod.data,n=n,
+                 scale.factors=scale.factors)
     } else {
-      out = list(post.samps=mod.out[[1]],data=mod.data,n=n)
+      out = list(post.samps=mod.out[[1]],data=mod.data,n=n,
+                 scale.factors=scale.factors)
     }
   }
 
