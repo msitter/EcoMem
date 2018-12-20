@@ -121,21 +121,49 @@ ecomem = function(formula,data,mem.vars,
     var.type = rep("C",p.mem)
   }
 
+  # Assign variable types to covariates
   aux.vars = main[!main%in%mem.vars]
   aux.vars.C = aux.vars[which(apply(as.matrix(data[,aux.vars]),
                                     2,class)%in%c("numeric","integer"))]
   aux.vars.D = aux.vars[!aux.vars%in%aux.vars.C]
-  # aux.var.class = apply(as.matrix(data[,aux.vars]),2,class)
-  # if (!all(aux.var.class%in%c("character","factor",
-  #                             "integer","numeric"))){
-  #   stop("covariates must be numeric or categorical")
-  # }
-  # aux.vars.D = aux.vars[aux.var.class%in%c("character","factor")]
-  # aux.vars.C = aux.vars[!aux.vars%in%aux.vars.D]
   mem.vars.C = mem.vars[var.type=="C"]
   nC = length(mem.vars.C)
   mem.vars.D = mem.vars[var.type=="D"]
   nD = length(mem.vars.D)
+
+  # Determine interaction terms including memory variables
+  if (inter==TRUE){
+    inter.terms = unlist(lapply(inter.vars,function(x){
+      if (!any(x%in%mem.vars)){
+        d = NULL
+      } else {
+        if (any(x%in%aux.vars.D)){
+          mem.var.idx = which(mem.vars%in%x)
+          aux.var.idx = which(aux.vars.D%in%x)
+          var = aux.vars.D[aux.var.idx]
+          aux.var.pos = which(x==var)
+          if (!is.factor(data[,var])){
+            tmp = factor(data[,var])
+          } else {
+            tmp = data[,var]
+          }
+          if (aux.var.pos==1){
+            d = paste(paste(var,levels(tmp)[-1],sep=""),mem.vars[mem.var.idx],sep=":")
+          } else {
+            d = paste(mem.vars[mem.var.idx],paste(var,levels(tmp)[-1],sep=""),sep=":")
+          }
+        } else {
+          d = paste(x,collapse=":")
+        }
+      }
+      return(d)
+    }))
+
+    inter.vars = lapply(1:length(inter.terms),function(i){
+      unlist(strsplit(inter.terms[i],":"))
+    })
+
+  }
 
   # Check discrete vars and calculate counts
   if (nD > 0){
@@ -177,6 +205,9 @@ ecomem = function(formula,data,mem.vars,
     return(wtd.val)
   }
 
+  #################################################
+  #### Fix time lag NA for discrete covariates ####
+  #################################################
   x.mem.all.obs = lapply(1:length(L),function(i){
     do.call("rbind",lapply(1:n.group,function(j){
       tmp.dat = data[data[,groupID]==group.idx[j],]
@@ -186,7 +217,6 @@ ecomem = function(formula,data,mem.vars,
             v = (0:(-L[i])) + tmp.dat[k,timeID]
             if (all(v%in%tmp.dat[,timeID])){
               x.vals = tmp.dat[match(v,tmp.dat[,timeID]),which(names(tmp.dat)==mem.vars[i])]
-              # x.vals = tmp.dat[tmp.dat[,timeID]%in%v,which(names(tmp.dat)==mem.vars[i])]
             } else {
               x.vals = rep(NA,L[i]+1)
             }
@@ -233,10 +263,6 @@ ecomem = function(formula,data,mem.vars,
   X = model.matrix(formula,data)
   p = ncol(X)
   storage.mode(X) = "double"
-  ##
-  ## Need to deal with interactions between
-  ## categorical auxiliary variables and memory variables
-  ##
   ### Memory function inputs ###
   # Define basis functions
   bf = list()
@@ -484,9 +510,9 @@ ecomem = function(formula,data,mem.vars,
         names(mod.out) = paste("chain",1:n.chains,sep="")
       }
     } else {
-      mod.out = coda::mcmc.list(lapply(mcmc.inputs,function(x){
+      mod.out = lapply(mcmc.inputs,function(x){
         ecomem::ecomemMCMC(x)
-      }))
+      })
     }
   }
 
