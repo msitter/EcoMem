@@ -228,6 +228,16 @@ ecomem = function(formula,data,mem.vars,
         storage.mode(x.lag.mat) = "double"
       } else {
         x.lag.mat = tsD(tmp.dat[,timeID],tmp.dat[,mem.vars[i]],L[i],max(D[,mem.vars[i]]))
+        for (k in 1:nrow(tmp.dat)){
+          if (!is.na(tmp.dat[k,resp])){
+            v = (0:(-L[i])) + tmp.dat[k,timeID]
+            if (!all(v%in%tmp.dat[,timeID])){
+              x.lag.mat[k,] = rep(NA,ncol(x.lag.mat))
+            }
+          } else {
+            x.lag.mat[k,] = rep(NA,ncol(x.lag.mat))
+          }
+        }
         storage.mode(x.lag.mat) = "integer"
       }
       return(x.lag.mat)
@@ -238,7 +248,7 @@ ecomem = function(formula,data,mem.vars,
     which(apply(x,1,function(y)any(is.na(y)))==T)
   }))))
 
-  mod.data[drop.idx,"resp"] = NA
+  mod.data[drop.idx,resp] = NA
   data = data[-drop.idx,]
   n = nrow(data)
   x.mem = lapply(x.mem.all.obs,function(x){
@@ -257,7 +267,7 @@ ecomem = function(formula,data,mem.vars,
   #### Create model inputs #############################################
   ######################################################################
 
-  #### Create data inputs ############################################
+  #### Create data inputs ##############################################
 
   ### Form design matrix ###
   X = model.matrix(formula,data)

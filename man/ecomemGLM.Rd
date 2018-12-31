@@ -1,20 +1,24 @@
-\name{ecomem}
-\alias{ecomem}
-\title{Function for quantifying ecological memory within a univariate regression model}
+\name{ecomemGLM}
+\alias{ecomemGLM}
+\title{Function for quantifying ecological memory within a univariate generalized linear model}
 
-\description{Estimates ecological memory functions for a specified subset of covariates and a continuous response within a linear model framework. The function is a wrapper to
-\code{\link{ecomemMCMC}} which implements Markov chain Monte Carlo (MCMC) simulation to fit a Bayesian hierarchical model estimating ecological memory.}
+\description{Estimates ecological memory functions for a specified subset of covariates and a discrete response within a generalized linear model framework. The function is a wrapper to
+\code{\link{ecomemGLMMCMC}} which implements Markov chain Monte Carlo (MCMC) simulation to fit a Bayesian hierarchical model estimating ecological memory.}
 
 \usage{
-ecomem(formula, data, mem.vars, var.type = NULL, L, timeID, groupID = NA,
-       starting = NULL, smooth = NULL, n.post = 1000, thin = 10,
-       burn.in = 5000, n.step = 5, n.chains = 3, parallel = TRUE,
-       max.cpu = NULL, inputs.only = FALSE, ...)
+ecomem(formula, family = "binomial", data, mem.vars, var.type = NULL,
+       L, timeID, groupID = NA, offset, starting = NULL,
+       smooth = NULL, n.post = 1000, thin = 10, burn.in = 5000,
+       n.step = 5, n.chains = 3, parallel = TRUE, max.cpu = NULL,
+       inputs.only = FALSE, ...)
 }
 
 \arguments{
   \item{formula}{an object of class \code{\link[stats]{formula}} providing
   a symbolic representation of the linear regression model to be fit.}
+  \item{family}{exponential family of the response. Currently supports only
+  \code{binomial} (default) and \code{poisson}, respectively applying logit and
+  log link functions.}
   \item{data}{a data frame including the response, explanatory, group, and time index
   variables.}
   \item{mem.vars}{an optional character vector indicating the subset of explanatory
@@ -31,6 +35,9 @@ ecomem(formula, data, mem.vars, var.type = NULL, L, timeID, groupID = NA,
   \code{data}.}
   \item{groupID}{an optional character value indicating a group index variable
   within \code{data}. Only one \code{groupID} variable is allowed.}
+  \item{offset}{an optional character value indicating an offset variable within
+  \code{data}. For \code{binomial} data, the offset indicates the number of trials (or
+  total size for proportional data).}
   \item{starting}{optional list of starting values for model parameters. If
   specified, the length of the list must match \code{n.chains}. Each element
   of the \code{starting} list must be a named list with names and dimensions

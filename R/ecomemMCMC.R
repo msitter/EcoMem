@@ -289,7 +289,6 @@ ecomemMCMC = function(x){
           tau.sq.sim[idx,] = tau^2
         }
         X.sim[idx,] = as.numeric(t(X))
-        theta.sim[idx,] = theta
       }
     }
 
@@ -304,12 +303,11 @@ ecomemMCMC = function(x){
 
   if (p.mem > 0){
     if (update.smooth==TRUE){
-      return(list(beta=coda::mcmc(beta.sim),sig.y=coda::mcmc(sig.y.sim),
-                  eta=coda::mcmc(eta.sim),w=coda::mcmc(wts.sim),
-                  X=X.sim,tau.sq=tau.sq.sim,theta=theta.sim))
+      return(list(beta=beta.sim,sig.y=sig.y.sim,eta=eta.sim,w=wts.sim,
+                  X=X.sim,tau.sq=tau.sq.sim))
     } else {
       return(list(beta=beta.sim,sig.y=sig.y.sim,eta=eta.sim,w=wts.sim,
-                  X=X.sim,theta=theta.sim))
+                  X=X.sim))
     }
   } else {
     return(list(beta=beta.sim,sig.y=sig.y.sim))

@@ -4,11 +4,12 @@
 #####################################################################
 #####################################################################
 
-ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
-                     var.type=NULL,L,timeID,groupID=NA,offset=NULL,
-                     starting=NULL,smooth=NULL,n.post=1000,thin=10,
-                     burn.in=5000,n.step=5,n.chains=3,parallel=TRUE,
-                     max.cpu=NULL,inputs.only=FALSE,...){
+ecomemGLM = function(formula,family="binomial",data,
+                     mem.vars,var.type=NULL,L,timeID,groupID=NA,
+                     offset=NULL,starting=NULL,smooth=NULL,
+                     n.post=1000,thin=10,burn.in=5000,n.step=5,
+                     n.chains=3,parallel=TRUE,max.cpu=NULL,
+                     inputs.only=FALSE,...){
 
   options(stringsAsFactors=FALSE)
   snow::setDefaultClusterOptions(type="SOCK")
@@ -52,6 +53,8 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
     stop("model formula is misspecified")
   }
 
+  if(!family%in%c("poisson","binomial")){stop("unknown family specified")}
+
   ######################################################################
 
   ######################################################################
@@ -59,8 +62,13 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
   ######################################################################
 
   # Check inputs
-  if(missing(mem.vars)){stop("no memory variable specified")}
-  if (!isTRUE(is.character(mem.vars))){stop("mem.vars must be a character")}
+  if(missing(data)){stop("no model data frame specified")}
+  if(missing(mem.vars)){
+    mem.vars = NULL
+    warning("no memory variables specified")
+  } else {
+    if (!isTRUE(is.character(mem.vars))){stop("mem.vars must be a character")}
+  }
   if(missing(timeID)){stop("time variable must be specified")}
   if (!isTRUE(is.character(timeID))){stop("timeID must be a character")}
   if(!isTRUE(all(data[,timeID]==floor(data[,timeID])))){stop("time variable must only contain integer values")}
@@ -74,11 +82,7 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
   if(!is.null(offset)){
     if(!isTRUE(is.character(offset))){stop("offset must be a character")}
     if(!offset%in%names(data)){stop("offset must refer to a data variable")}
-    if(family=="poisson"){
-      if(!isTRUE(all(data[,offset]>0))){stop("offset must be positive for Poisson data")}
-    } else {
-      if(!isTRUE(all(data[,offset]==floor(data[,offset])))){stop("offset must integer for Binomial data")}
-    }
+    if(!isTRUE(all(data[,offset]>0))){stop("offset must be positive")}
   }
 
   # Define offset
@@ -86,38 +90,6 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
     offset = data[,offset]
   } else {
     offset = rep(1,nrow(data))
-  }
-
-  # Check var.type
-  if (!is.null(var.type)){
-    if (!all(var.type%in%c("C","D"))){stop("one or more memory covariates are mis-categorized")}
-    check.var.type = length(var.type)
-    if (check.var.type==1){
-      var.type = rep(var.type,p.mem)
-    } else {
-      if (check.var.type!=p.mem){stop("var.type is missing for one or more memory covariates")}
-    }
-  } else {
-    var.type = rep("C",p.mem)
-  }
-
-  aux.vars = main[!main%in%mem.vars]
-  mem.vars.C = mem.vars[var.type=="C"]
-  nC = length(mem.vars.C)
-  mem.vars.D = mem.vars[var.type=="D"]
-  nD = length(mem.vars.D)
-
-  # Check discrete vars and calculate counts
-  if (nD > 0){
-    if (!all(data[,mem.vars.D]%in%c(0,1))){stop("Non-binary discrete memory covariates specified")}
-    D = array(NA,dim=c(n.grp,nD))
-    for (i in 1:n.grp){
-      for (j in 1:nD){
-        tmp = dat[dat[,"group"]==groups[i],mem.vars.D[j]]
-        D[i,j] = sum(tmp)
-      }
-    }
-    colnames(D) = mem.vars.D
   }
 
   # Check L input
@@ -153,8 +125,85 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
     n.group = length(group.idx)
   }
 
+  # Check var.type
+  if (!is.null(var.type)){
+    if (!all(var.type%in%c("C","D"))){stop("one or more memory covariates are mis-categorized")}
+    check.var.type = length(var.type)
+    if (check.var.type==1){
+      var.type = rep(var.type,p.mem)
+    } else {
+      if (check.var.type!=p.mem){stop("var.type is missing for one or more memory covariates")}
+    }
+  } else {
+    var.type = rep("C",p.mem)
+  }
+
+  # Assign variable types to covariates
+  aux.vars = main[!main%in%mem.vars]
+  aux.vars.C = aux.vars[which(apply(as.matrix(data[,aux.vars]),
+                                    2,class)%in%c("numeric","integer"))]
+  aux.vars.D = aux.vars[!aux.vars%in%aux.vars.C]
+  mem.vars.C = mem.vars[var.type=="C"]
+  nC = length(mem.vars.C)
+  mem.vars.D = mem.vars[var.type=="D"]
+  nD = length(mem.vars.D)
+
+  # Determine interaction terms including memory variables
+  if (inter==TRUE){
+    inter.terms = unlist(lapply(inter.vars,function(x){
+      if (!any(x%in%mem.vars)){
+        d = NULL
+      } else {
+        if (any(x%in%aux.vars.D)){
+          mem.var.idx = which(mem.vars%in%x)
+          aux.var.idx = which(aux.vars.D%in%x)
+          var = aux.vars.D[aux.var.idx]
+          aux.var.pos = which(x==var)
+          if (!is.factor(data[,var])){
+            tmp = factor(data[,var])
+          } else {
+            tmp = data[,var]
+          }
+          if (aux.var.pos==1){
+            d = paste(paste(var,levels(tmp)[-1],sep=""),mem.vars[mem.var.idx],sep=":")
+          } else {
+            d = paste(mem.vars[mem.var.idx],paste(var,levels(tmp)[-1],sep=""),sep=":")
+          }
+        } else {
+          d = paste(x,collapse=":")
+        }
+      }
+      return(d)
+    }))
+
+    inter.vars = lapply(1:length(inter.terms),function(i){
+      unlist(strsplit(inter.terms[i],":"))
+    })
+
+  }
+
+  # Check discrete vars and calculate counts
+  if (nD > 0){
+    if (!all(data[,mem.vars.D]%in%c(0,1))){stop("Non-binary discrete memory covariates specified")}
+    D = array(NA,dim=c(n.grp,nD))
+    for (i in 1:n.grp){
+      for (j in 1:nD){
+        tmp = dat[dat[,"group"]==groups[i],mem.vars.D[j]]
+        D[i,j] = sum(tmp)
+      }
+    }
+    colnames(D) = mem.vars.D
+  }
+
   data = data[order(data[,groupID],data[,timeID]),]
-  data[,c(mem.vars.C,aux.vars)] = scale(data[,c(mem.vars.C,aux.vars)])
+  scaled.X = scale(dat[,c(mem.vars.C,aux.vars.C)],center=FALSE)
+  scale.factors = attr(scaled.X,"scaled:scale")
+  if (dim(scaled.X)[2]==1){
+    data[,c(mem.vars.C,aux.vars.C)] = as.numeric(scaled.X)
+    names(scale.factors) = c(mem.vars.C,aux.vars.C)
+  } else {
+    data[,c(mem.vars.C,aux.vars.C)] = scaled.X
+  }
   mod.data = data
 
   # Define function to calculate time since disturbance
@@ -173,6 +222,9 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
     return(wtd.val)
   }
 
+  #################################################
+  #### Fix time lag NA for discrete covariates ####
+  #################################################
   x.mem.all.obs = lapply(1:length(L),function(i){
     do.call("rbind",lapply(1:n.group,function(j){
       tmp.dat = data[data[,groupID]==group.idx[j],]
@@ -182,7 +234,6 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
             v = (0:(-L[i])) + tmp.dat[k,timeID]
             if (all(v%in%tmp.dat[,timeID])){
               x.vals = tmp.dat[match(v,tmp.dat[,timeID]),which(names(tmp.dat)==mem.vars[i])]
-              # x.vals = tmp.dat[tmp.dat[,timeID]%in%v,which(names(tmp.dat)==mem.vars[i])]
             } else {
               x.vals = rep(NA,L[i]+1)
             }
@@ -194,6 +245,16 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
         storage.mode(x.lag.mat) = "double"
       } else {
         x.lag.mat = tsD(tmp.dat[,timeID],tmp.dat[,mem.vars[i]],L[i],max(D[,mem.vars[i]]))
+        for (k in 1:nrow(tmp.dat)){
+          if (!is.na(tmp.dat[k,resp])){
+            v = (0:(-L[i])) + tmp.dat[k,timeID]
+            if (!all(v%in%tmp.dat[,timeID])){
+              x.lag.mat[k,] = rep(NA,ncol(x.lag.mat))
+            }
+          } else {
+            x.lag.mat[k,] = rep(NA,ncol(x.lag.mat))
+          }
+        }
         storage.mode(x.lag.mat) = "integer"
       }
       return(x.lag.mat)
@@ -204,9 +265,6 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
     which(apply(x,1,function(y)any(is.na(y)))==T)
   }))))
 
-  mod.data[drop.idx,"resp"] = NA
-  data = data[-drop.idx,]
-
   # Check response type for Poisson data
   if (family=="poisson"){
     if(!isTRUE(all(data[,resp]==
@@ -214,12 +272,13 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
                                               integer for poisson family")}
   }
 
+  mod.data[drop.idx,resp] = NA
+  data = data[-drop.idx,]
   n = nrow(data)
   x.mem = lapply(x.mem.all.obs,function(x){
     x[-drop.idx,]
   })
   names(x.mem) = mem.vars
-  offset = offset[-drop.idx]
   group = group[-drop.idx]
   if (any(as.numeric(table(group))==0)){
     warning("no data for one or more groups")
@@ -232,31 +291,11 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
   #### Create model inputs #############################################
   ######################################################################
 
-  #### Create weight matrices ########################################
-
-  W = lapply(1:p.mem,function(i){
-    rep(1,L[i]+1)/(L[i]+1)
-  })
-  names(W) = mem.vars
-
-  #### Create data inputs ############################################
+  #### Create data inputs ##############################################
 
   ### Form design matrix ###
   X = model.matrix(formula,data)
   p = ncol(X)
-  # Update columns with memory variables
-  X[,mem.vars] = sapply(1:p.mem,function(j){
-    if (var.type[j]=="C"){
-      x.mem[[j]]%*%W[[j]]
-    } else {
-      wtD(x.mem[[j]],W[[j]])
-    }
-  })
-  if (inter==TRUE){
-    X[,inter.terms] = sapply(1:length(inter.vars),function(j){
-      apply(X[,inter.vars[[j]]],1,prod)
-    })
-  }
   storage.mode(X) = "double"
   ### Memory function inputs ###
   # Define basis functions
@@ -266,7 +305,7 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
     time = data.frame(t=0:L[j],t.s=t.s)
     n.knots = L[j] + 1
     CRbasis = mgcv::smoothCon(s(t.s,k=n.knots,bs="cr"),data=time,knots=NULL,absorb.cons=TRUE,
-                        scale.penalty=TRUE)
+                              scale.penalty=TRUE)
     RE = diag(ncol(CRbasis[[1]]$S[[1]]))
     bf[[j]] = list(S=CRbasis[[1]]$S[[1]]+(1E-07)*RE,
                    H=CRbasis[[1]]$X,
@@ -505,19 +544,19 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
       if(!is.null(max.cpu)){
         snowfall::sfInit(parallel=T,cpus=max.cpu,slaveOutfile="track-ecomem.txt")
         snowfall::sfClusterSetupRNG()
-        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomemGLMMCMC)
+        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomem::ecomemGLMMCMC)
         snowfall::sfStop()
         names(mod.out) = paste("chain",1:n.chains,sep="")
       } else {
         snowfall::sfInit(parallel=T,cpus=n.chains,slaveOutfile="track-ecomem.txt")
         snowfall::sfClusterSetupRNG()
-        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomemGLMMCMC)
+        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomem::ecomemGLMMCMC)
         snowfall::sfStop()
         names(mod.out) = paste("chain",1:n.chains,sep="")
       }
     } else {
       mod.out = lapply(mcmc.inputs,function(x){
-        ecomemGLMMCMC(x)
+        ecomem::ecomemGLMMCMC(x)
       })
     }
   }
@@ -529,14 +568,19 @@ ecomemGLM = function(formula,family,data=parent.frame(),mem.vars,
   ######################################################################
 
   if (isTRUE(inputs.only)){
-    return(list(inputs=mcmc.inputs,data=mod.data,n=n))
+    out = list(inputs=mcmc.inputs,data=mod.data,n=n,
+               scale.factors=scale.factors)
   } else {
     if (n.chains>1){
-      return(list(post.samps=mod.out,data=mod.data,n=n))
+      out = list(post.samps=mod.out,data=mod.data,n=n,
+                 scale.factors=scale.factors)
     } else {
-      return(list(post.samps=mod.out[[1]],data=mod.data,n=n))
+      out = list(post.samps=mod.out[[1]],data=mod.data,n=n,
+                 scale.factors=scale.factors)
     }
   }
+
+  class(out) = "ecomem"
 
   ######################################################################
 
