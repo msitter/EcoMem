@@ -272,6 +272,7 @@ ecomem = function(formula,data,mem.vars,
   ### Form design matrix ###
   X = model.matrix(formula,data)
   p = ncol(X)
+  pred.vars = colnames(X)
   storage.mode(X) = "double"
   ### Memory function inputs ###
   # Define basis functions
@@ -511,7 +512,6 @@ ecomem = function(formula,data,mem.vars,
         mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomem::ecomemMCMC)
         snowfall::sfStop()
         names(mod.out) = paste("chain",1:n.chains,sep="")
-
       } else {
         snowfall::sfInit(parallel=T,cpus=n.chains,slaveOutfile="track-ecomem.txt")
         snowfall::sfClusterSetupRNG()
@@ -534,14 +534,17 @@ ecomem = function(formula,data,mem.vars,
 
   if (isTRUE(inputs.only)){
     out = list(inputs=mcmc.inputs,data=mod.data,n=n,
-               scale.factors=scale.factors)
+               scale.factors=scale.factors,pred.vars=pred.vars,
+               mem.vars=mem.vars)
   } else {
     if (n.chains>1){
       out = list(post.samps=mod.out,data=mod.data,n=n,
-                 scale.factors=scale.factors)
+                 scale.factors=scale.factors,pred.vars=pred.vars,
+                 mem.vars=mem.vars)
     } else {
       out = list(post.samps=mod.out[[1]],data=mod.data,n=n,
-                 scale.factors=scale.factors)
+                 scale.factors=scale.factors,pred.vars=pred.vars,
+                 mem.vars=mem.vars)
     }
   }
 
