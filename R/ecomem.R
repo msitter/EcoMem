@@ -167,11 +167,11 @@ ecomem = function(formula,data,mem.vars,
 
   # Check discrete vars and calculate counts
   if (nD > 0){
-    if (!all(data[,mem.vars.D]%in%c(0,1))){stop("Non-binary discrete memory covariates specified")}
-    D = array(NA,dim=c(n.grp,nD))
-    for (i in 1:n.grp){
+    if (!all(data[,mem.vars.D]%in%c(NA,0,1))){stop("Non-binary discrete memory covariates specified")}
+    D = array(NA,dim=c(n.group,nD))
+    for (i in 1:n.group){
       for (j in 1:nD){
-        tmp = dat[dat[,"group"]==groups[i],mem.vars.D[j]]
+        tmp = data[data[,groupID]==group.idx[i],mem.vars.D[j]]
         D[i,j] = sum(tmp)
       }
     }
@@ -179,7 +179,7 @@ ecomem = function(formula,data,mem.vars,
   }
 
   data = data[order(data[,groupID],data[,timeID]),]
-  scaled.X = scale(dat[,c(mem.vars.C,aux.vars.C)],center=FALSE)
+  scaled.X = scale(data[,c(mem.vars.C,aux.vars.C)],center=FALSE)
   scale.factors = attr(scaled.X,"scaled:scale")
   if (dim(scaled.X)[2]==1){
     data[,c(mem.vars.C,aux.vars.C)] = as.numeric(scaled.X)
@@ -227,7 +227,8 @@ ecomem = function(formula,data,mem.vars,
         }))
         storage.mode(x.lag.mat) = "double"
       } else {
-        x.lag.mat = tsD(tmp.dat[,timeID],tmp.dat[,mem.vars[i]],L[i],max(D[,mem.vars[i]]))
+        x.lag.mat = tsD(tmp.dat[,timeID],tmp.dat[,mem.vars[i]],L[i],
+                        max(D[,mem.vars[i]],na.rm=TRUE))
         for (k in 1:nrow(tmp.dat)){
           if (!is.na(tmp.dat[k,resp])){
             v = (0:(-L[i])) + tmp.dat[k,timeID]
@@ -281,7 +282,7 @@ ecomem = function(formula,data,mem.vars,
     t.s = (0:L[j])/L[j]
     time = data.frame(t=0:L[j],t.s=t.s)
     n.knots = L[j] + 1
-    CRbasis = mgcv::smoothCon(s(t.s,k=n.knots,bs="cr"),data=time,knots=NULL,absorb.cons=TRUE,
+    CRbasis = mgcv::smoothCon(mgcv::s(t.s,k=n.knots,bs="cr"),data=time,knots=NULL,absorb.cons=TRUE,
                         scale.penalty=TRUE)
     RE = diag(ncol(CRbasis[[1]]$S[[1]]))
     bf[[j]] = list(S=CRbasis[[1]]$S[[1]]+(1E-07)*RE,
