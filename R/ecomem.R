@@ -65,7 +65,7 @@ ecomem = function(formula,data,mem.vars,
     warning("no memory variables specified")
   } else {
     if (!isTRUE(is.character(mem.vars))){stop("mem.vars must be a character")}
-    }
+  }
   if(missing(timeID)){stop("time variable must be specified")}
   if (!isTRUE(is.character(timeID))){stop("timeID must be a character")}
   if(!isTRUE(all(data[,timeID]==floor(data[,timeID])))){stop("time variable must only contain integer values")}
@@ -99,14 +99,12 @@ ecomem = function(formula,data,mem.vars,
 
   # Define groups
   if (is.na(groupID)){
-    group = rep(1,nrow(data))
-    group.idx = 1
-    n.group = 1
-  } else {
-    group = data[,groupID]
-    group.idx = sort(unique(group))
-    n.group = length(group.idx)
+    data$groupID = rep(1,nrow(data))
+    groupID = "groupID"
   }
+  group = data[,groupID]
+  group.idx = sort(unique(group))
+  n.group = length(group.idx)
 
   # Check var.type
   if (!is.null(var.type)){
@@ -283,7 +281,7 @@ ecomem = function(formula,data,mem.vars,
     time = data.frame(t=0:L[j],t.s=t.s)
     n.knots = L[j] + 1
     CRbasis = mgcv::smoothCon(mgcv::s(t.s,k=n.knots,bs="cr"),data=time,knots=NULL,absorb.cons=TRUE,
-                        scale.penalty=TRUE)
+                              scale.penalty=TRUE)
     RE = diag(ncol(CRbasis[[1]]$S[[1]]))
     bf[[j]] = list(S=CRbasis[[1]]$S[[1]]+(1E-07)*RE,
                    H=CRbasis[[1]]$X,
@@ -293,23 +291,23 @@ ecomem = function(formula,data,mem.vars,
   # Define smoothing parameters (if provided)
   if(!is.null(smooth)){
     inputs = list(y=as.double(data[,resp]),X.fix=X,n=as.integer(n),
-                 p=as.integer(p),mem.vars=as.character(mem.vars),
-                 var.type=as.character(var.type),
-                 p.mem=as.integer(p.mem),L=as.integer(L),x.lag=x.mem,
-                 bf=bf,tau.sq=as.double(smooth),update.smooth=FALSE,
-                 inter=inter,inter.terms=inter.terms,inter.vars=inter.vars,
-                 n.post=as.integer(n.post),thin=as.integer(thin),
-                 burn.in=as.integer(burn.in),n.chains=as.integer(n.chains),
-                 n.step=as.integer(n.step))
+                  p=as.integer(p),mem.vars=as.character(mem.vars),
+                  var.type=as.character(var.type),
+                  p.mem=as.integer(p.mem),L=as.integer(L),x.lag=x.mem,
+                  bf=bf,tau.sq=as.double(smooth),update.smooth=FALSE,
+                  inter=inter,inter.terms=inter.terms,inter.vars=inter.vars,
+                  n.post=as.integer(n.post),thin=as.integer(thin),
+                  burn.in=as.integer(burn.in),n.chains=as.integer(n.chains),
+                  n.step=as.integer(n.step))
   } else {
     inputs = list(y=as.double(data[,resp]),X.fix=X,n=as.integer(n),
-                 p=as.integer(p),mem.vars=as.character(mem.vars),
-                 var.type=as.character(var.type),
-                 p.mem=as.integer(p.mem),L=as.integer(L),x.lag=x.mem,
-                 bf=bf,update.smooth=TRUE,inter=inter,inter.terms=inter.terms,
-                 inter.vars=inter.vars,n.post=as.integer(n.post),thin=as.integer(thin),
-                 burn.in=as.integer(burn.in),n.chains=as.integer(n.chains),
-                 n.step=as.integer(n.step))
+                  p=as.integer(p),mem.vars=as.character(mem.vars),
+                  var.type=as.character(var.type),
+                  p.mem=as.integer(p.mem),L=as.integer(L),x.lag=x.mem,
+                  bf=bf,update.smooth=TRUE,inter=inter,inter.terms=inter.terms,
+                  inter.vars=inter.vars,n.post=as.integer(n.post),thin=as.integer(thin),
+                  burn.in=as.integer(burn.in),n.chains=as.integer(n.chains),
+                  n.step=as.integer(n.step))
   }
 
   ######################################################################
@@ -510,19 +508,19 @@ ecomem = function(formula,data,mem.vars,
       if(!is.null(max.cpu)){
         snowfall::sfInit(parallel=T,cpus=max.cpu,slaveOutfile="track-ecomem.txt")
         snowfall::sfClusterSetupRNG()
-        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomem::ecomemMCMC)
+        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomemMCMC)
         snowfall::sfStop()
         names(mod.out) = paste("chain",1:n.chains,sep="")
       } else {
         snowfall::sfInit(parallel=T,cpus=n.chains,slaveOutfile="track-ecomem.txt")
         snowfall::sfClusterSetupRNG()
-        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomem::ecomemMCMC)
+        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomemMCMC)
         snowfall::sfStop()
         names(mod.out) = paste("chain",1:n.chains,sep="")
       }
     } else {
       mod.out = lapply(mcmc.inputs,function(x){
-        ecomem::ecomemMCMC(x)
+        ecomemMCMC(x)
       })
     }
   }

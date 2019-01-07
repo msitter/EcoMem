@@ -250,7 +250,7 @@ ecomemMCMC = function(x){
 
       #### Update tuning variance for tau ####
       if (update.smooth==TRUE){
-        tau.rate = apply(tau.track[(iter-(n.batch-1)):iter,],2,mean)
+        tau.rate = apply(as.matrix(tau.track[(iter-(n.batch-1)):iter,]),2,mean)
         for (i in 1:p.mem){
           if (tau.rate[i]>0.44){
             tau.tune[i] = exp(log(tau.tune[i])+delta.n)

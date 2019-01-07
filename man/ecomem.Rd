@@ -126,14 +126,146 @@ explanatory variables. Names correspond to model variables.}
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
+\dontrun{
 
-## The function is currently defined as
-function (x)
-{
-  }
+####################################
+#### Continuous covariate ##########
+####################################
+
+## Simulate some time series data
+
+set.seed(1)
+
+# Maximum lag
+L = 10
+
+# Sample size
+n = 1000
+
+# Total number of time points
+TT = n + L
+
+# Generate weights
+w = exp(-0.5*(0:L))/sum(exp(-0.5*(0:L)))
+
+# Simulate a single continous covariate
+x = scale(rnorm(TT,(1:TT)/1000+0.05*cos(2*pi*10*(1:TT)/TT),0.5),center=FALSE)
+
+# Form matrix containing lagged covariate values
+x.lag = t(sapply(1:n,function(i){
+  x[(L+1):1 + i - 1]
+}))
+
+# Calculate weighted covariate values
+x.tilde = x.lag%*%w
+
+# Form design matrix
+X = cbind(rep(1,n),x.tilde)
+
+# Set model parameter values
+beta = c(1.3,-0.4)
+sig.y = 0.1
+
+# Simulate from ecological memory model
+y = c(rep(NA,L),rnorm(n,X%*%beta,sig.y))
+
+# Form model data frame
+data = data.frame(time=1:TT,x=x,y=y)
+
+## Run ecomem function
+
+mod = ecomem(y~x,data=data,mem.vars="x",L=L,timeID="time")
+
+## Assess model convergence
+
+post.samps = mem2mcmc(mod)
+plot(post.samps,ask=T)
+
+## Process results
+
+coef.summ = memsum(mod)
+
+p = plotmem(mod)
+print(p)
+
+####################################
+#### Discrete covariate ############
+####################################
+
+## Define function to calculate time since event
+tsD = function(t,v,max,n.col){
+  tmp = outer(t,t[v==1],"-")
+  tmp[tmp<0|tmp>max] = 9999
+  tmp = cbind(tmp,matrix(9999,nrow(tmp),n.col-ncol(tmp)))
+  return(tmp)
+}
+
+## Define function to weight event data
+wtD = function(x,w){
+  tmp = matrix(w[x+1],dim(x))
+  tmp[is.na(tmp)] = 0
+  wtd.val = apply(tmp,1,sum)
+  return(wtd.val)
+}
+
+## Simulate some time series data
+
+set.seed(1)
+
+# Maximum lag
+L = 5
+
+# Sample size
+n = 500
+
+# Total number of time points
+TT = n + L
+
+# Generate weights
+w = exp(-0.95*(0:L))/sum(exp(-0.95*(0:L)))
+
+# Simulate a single binary covariate
+x = rbinom(TT,1,0.05)
+
+# Calculate event counts
+nx = sum(x)
+
+# Form matrix with time since event values
+tsd.vals = tsD(1:TT,x,L,nx)[(L+1):TT,]
+
+# Calculate weighted covariate values
+x.tilde = wtD(tsd.vals,w)
+
+# Form design matrix
+X = cbind(rep(1,n),x.tilde)
+
+# Define model parameters
+beta = c(2.5,3.4)
+sig.y = 0.2
+
+# Simulate from ecological memory model
+y = c(rep(NA,L),rnorm(n,X%*%beta,sig.y))
+
+# Form model data frame
+data = data.frame(time=1:TT,x=x,y=y)
+
+## Run ecomem function
+
+mod = ecomem(y~x,data=data,mem.vars="x",var.type="D",L=L,timeID="time")
+
+## Assess model convergence
+
+post.samps = mem2mcmc(mod)
+plot(post.samps,ask=T)
+
+## Process results
+
+coef.summ = memsum(mod)
+
+p = plotmem(mod)
+print(p)
+
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
