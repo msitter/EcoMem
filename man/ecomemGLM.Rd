@@ -133,14 +133,136 @@ explanatory variables. Names correspond to model variables.}
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
+\dontrun{
 
-## The function is currently defined as
-function (x)
-{
-  }
+####################################
+#### Binomial response #############
+####################################
+
+## Define logit backtransformation
+inv.logit = function(x){
+    1/(1+exp(-x))
+}
+
+## Simulate some time series data
+
+set.seed(1)
+
+# Maximum lag
+L = 8
+
+# Sample size
+n = 2000
+
+# Total number of time points
+TT = n + L
+
+# Generate weights
+w = exp(-0.7*(0:L))/sum(exp(-0.7*(0:L)))
+
+# Simulate covariate values
+x = scale(rnorm(TT,(1:TT)/5000+0.02*cos(2*pi*(1:TT)/TT),2.4),center=FALSE)
+
+# Form matrix containing lagged covariate values
+x.lag = t(sapply(1:n,function(i){
+  x[(L+1):1 + i - 1]
+}))
+
+# Calculate weighted covariate values
+x.tilde = x.lag\%*\%w
+
+# Form design matrix
+X = cbind(rep(1,n),x.tilde)
+
+# Set model parameter values
+beta = c(-0.8,0.75)
+
+# Simulate from ecological memory model
+n.trials = sample(1:5,n,replace=T)
+y = c(rep(NA,L),rbinom(n,n.trials,inv.logit(X\%*\%beta)))
+
+# Form model data frame
+data = data.frame(time=1:TT,x=x,y=y,n.trials=c(rep(NA,L),n.trials))
+
+## Run ecomem function
+
+mod = ecomemGLM(y~x,family="binomial",data=data,mem.vars="x",L=L,
+                timeID="time",offset="n.trials")
+
+## Assess model convergence
+
+post.samps = mem2mcmc(mod)
+plot(post.samps,ask=T)
+
+## Process results
+
+coef.summ = memsum(mod)
+
+p = plotmem(mod)
+print(p)
+
+####################################
+#### Poisson response ##############
+####################################
+
+## Simulate some time series data
+
+set.seed(1)
+
+# Maximum lag
+L = 8
+
+# Sample size
+n = 2000
+
+# Total number of time points
+TT = n + L
+
+# Generate weights
+w = exp(-0.7*(0:L))/sum(exp(-0.7*(0:L)))
+
+# Simulate covariate values
+x = scale(rnorm(TT,(1:TT)/5000+0.02*cos(2*pi*(1:TT)/TT),2.4),center=FALSE)
+
+# Form matrix containing lagged covariate values
+x.lag = t(sapply(1:n,function(i){
+  x[(L+1):1 + i - 1]
+}))
+
+# Calculate weighted covariate values
+x.tilde = x.lag\%*\%w
+
+# Form design matrix
+X = cbind(rep(1,n),x.tilde)
+
+# Set model parameter values
+beta = c(-1.3,0.95)
+
+# Simulate from ecological memory model
+effort = runif(n,0,10)
+y = c(rep(NA,L),rpois(n,exp(X\%*\%beta)*effort))
+
+# Form model data frame
+data = data.frame(time=1:TT,x=x,y=y,effort=c(rep(NA,L),effort))
+
+## Run ecomem function
+
+mod = ecomemGLM(y~x,family="poisson",data=data,mem.vars="x",L=L,
+                timeID="time",offset="effort",n.step=12,thin=15)
+
+## Assess model convergence
+
+post.samps = mem2mcmc(mod)
+plot(post.samps,ask=T)
+
+## Process results
+
+coef.summ = memsum(mod)
+
+p = plotmem(mod)
+print(p)
+
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

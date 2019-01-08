@@ -148,8 +148,9 @@ TT = n + L
 # Generate weights
 w = exp(-0.5*(0:L))/sum(exp(-0.5*(0:L)))
 
-# Simulate a single continous covariate
-x = scale(rnorm(TT,(1:TT)/1000+0.05*cos(2*pi*10*(1:TT)/TT),0.5),center=FALSE)
+# Simulate a single continuous covariate
+x = scale(rnorm(TT,(1:TT)/1000+0.05*cos(
+    2*pi*10*(1:TT)/TT),2.4),center=FALSE)
 
 # Form matrix containing lagged covariate values
 x.lag = t(sapply(1:n,function(i){
@@ -157,7 +158,7 @@ x.lag = t(sapply(1:n,function(i){
 }))
 
 # Calculate weighted covariate values
-x.tilde = x.lag%*%w
+x.tilde = x.lag\%*\%w
 
 # Form design matrix
 X = cbind(rep(1,n),x.tilde)
@@ -167,7 +168,7 @@ beta = c(1.3,-0.4)
 sig.y = 0.1
 
 # Simulate from ecological memory model
-y = c(rep(NA,L),rnorm(n,X%*%beta,sig.y))
+y = c(rep(NA,L),rnorm(n,X\%*\%beta,sig.y))
 
 # Form model data frame
 data = data.frame(time=1:TT,x=x,y=y)
@@ -192,7 +193,7 @@ print(p)
 #### Discrete covariate ############
 ####################################
 
-## Define function to calculate time since event
+## Define function to calculate time since events
 tsD = function(t,v,max,n.col){
   tmp = outer(t,t[v==1],"-")
   tmp[tmp<0|tmp>max] = 9999
@@ -244,14 +245,15 @@ beta = c(2.5,3.4)
 sig.y = 0.2
 
 # Simulate from ecological memory model
-y = c(rep(NA,L),rnorm(n,X%*%beta,sig.y))
+y = c(rep(NA,L),rnorm(n,X\%*\%beta,sig.y))
 
 # Form model data frame
 data = data.frame(time=1:TT,x=x,y=y)
 
 ## Run ecomem function
 
-mod = ecomem(y~x,data=data,mem.vars="x",var.type="D",L=L,timeID="time")
+mod = ecomem(y~x,data=data,mem.vars="x",var.type="D",
+      L=L,timeID="time")
 
 ## Assess model convergence
 

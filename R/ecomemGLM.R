@@ -83,19 +83,10 @@ ecomemGLM = function(formula,family="binomial",data,
 
   p.mem = length(mem.vars)
 
-  # Check offset
+  # Define offset
   if(!is.null(offset)){
     if(!isTRUE(is.character(offset))){stop("offset must be a character")}
     if(!offset%in%names(data)){stop("offset must refer to a data variable")}
-    if(!isTRUE(all(data[,offset]>0))){stop("offset must be positive")}
-    if(family=="binomial"){
-      if(!isTRUE(all(data[,offset]==floor(data[,offset])))){
-        stop("offset must integer for binomial data")}
-    }
-  }
-
-  # Define offset
-  if(!is.null(offset)){
     offset = data[,offset]
   } else {
     offset = rep(1,nrow(data))
@@ -125,14 +116,12 @@ ecomemGLM = function(formula,family="binomial",data,
 
   # Define groups
   if (is.na(groupID)){
-    group = rep(1,nrow(data))
-    group.idx = 1
-    n.group = 1
-  } else {
-    group = data[,groupID]
-    group.idx = sort(unique(group))
-    n.group = length(group.idx)
+    data$groupID = rep(1,nrow(data))
+    groupID = "groupID"
   }
+  group = data[,groupID]
+  group.idx = sort(unique(group))
+  n.group = length(group.idx)
 
   # Check var.type
   if (!is.null(var.type)){
@@ -284,6 +273,14 @@ ecomemGLM = function(formula,family="binomial",data,
   })
   names(x.mem) = mem.vars
   offset = offset[-drop.idx]
+
+  # Check offset
+  if(!isTRUE(all(offset>0))){stop("offset must be positive")}
+  if(family=="binomial"){
+    if(!isTRUE(all(offset==floor(offset)))){
+      stop("offset must integer for binomial data")}
+  }
+
   group = group[-drop.idx]
   if (any(as.numeric(table(group))==0)){
     warning("no data for one or more groups")
@@ -301,6 +298,7 @@ ecomemGLM = function(formula,family="binomial",data,
   ### Form design matrix ###
   X = model.matrix(formula,data)
   p = ncol(X)
+  pred.vars = colnames(X)
   storage.mode(X) = "double"
   ### Memory function inputs ###
   # Define basis functions
@@ -549,19 +547,19 @@ ecomemGLM = function(formula,family="binomial",data,
       if(!is.null(max.cpu)){
         snowfall::sfInit(parallel=T,cpus=max.cpu,slaveOutfile="track-ecomem.txt")
         snowfall::sfClusterSetupRNG()
-        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomem::ecomemGLMMCMC)
+        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomemGLMMCMC)
         snowfall::sfStop()
         names(mod.out) = paste("chain",1:n.chains,sep="")
       } else {
         snowfall::sfInit(parallel=T,cpus=n.chains,slaveOutfile="track-ecomem.txt")
         snowfall::sfClusterSetupRNG()
-        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomem::ecomemGLMMCMC)
+        mod.out = snowfall::sfClusterApply(mcmc.inputs,ecomemGLMMCMC)
         snowfall::sfStop()
         names(mod.out) = paste("chain",1:n.chains,sep="")
       }
     } else {
       mod.out = lapply(mcmc.inputs,function(x){
-        ecomem::ecomemGLMMCMC(x)
+        ecomemGLMMCMC(x)
       })
     }
   }
@@ -574,14 +572,17 @@ ecomemGLM = function(formula,family="binomial",data,
 
   if (isTRUE(inputs.only)){
     out = list(inputs=mcmc.inputs,data=mod.data,n=n,
-               scale.factors=scale.factors)
+               scale.factors=scale.factors,pred.vars=pred.vars,
+               mem.vars=mem.vars)
   } else {
     if (n.chains>1){
       out = list(post.samps=mod.out,data=mod.data,n=n,
-                 scale.factors=scale.factors)
+                 scale.factors=scale.factors,pred.vars=pred.vars,
+                 mem.vars=mem.vars)
     } else {
       out = list(post.samps=mod.out[[1]],data=mod.data,n=n,
-                 scale.factors=scale.factors)
+                 scale.factors=scale.factors,pred.vars=pred.vars,
+                 mem.vars=mem.vars)
     }
   }
 
