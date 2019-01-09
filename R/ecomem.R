@@ -170,7 +170,7 @@ ecomem = function(formula,data,mem.vars,
     for (i in 1:n.group){
       for (j in 1:nD){
         tmp = data[data[,groupID]==group.idx[i],mem.vars.D[j]]
-        D[i,j] = sum(tmp)
+        D[i,j] = sum(tmp,na.rm=TRUE)
       }
     }
     colnames(D) = mem.vars.D
@@ -189,7 +189,7 @@ ecomem = function(formula,data,mem.vars,
 
   # Define function to calculate time since disturbance
   tsD = function(t,v,max,n.col){
-    tmp = outer(t,t[v==1],"-")
+    tmp = outer(t,t[v==1&!is.na(v)],"-")
     tmp[tmp<0|tmp>max] = 9999
     tmp = cbind(tmp,matrix(9999,nrow(tmp),n.col-ncol(tmp)))
     return(tmp)
@@ -243,9 +243,11 @@ ecomem = function(formula,data,mem.vars,
     }))
   })
 
-  drop.idx = sort(unique(unlist(lapply(x.mem.all.obs,function(x){
-    which(apply(x,1,function(y)any(is.na(y)))==T)
-  }))))
+  drop.idx = sort(unique(
+    c(unlist(lapply(x.mem.all.obs,function(x){
+      which(apply(x,1,function(y)any(is.na(y)))==T)
+    })),which(apply(as.matrix(data[,aux.vars]),1,
+                    function(z)any(is.na(z)))))))
 
   mod.data[drop.idx,resp] = NA
   data = data[-drop.idx,]
