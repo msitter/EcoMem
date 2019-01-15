@@ -29,7 +29,7 @@ plotmem = function(x,cred.int=0.95,...){
   p = ggplot2::ggplot(aes(x=lag,y=mean,ymin=lwr,ymax=upr),data=w.post) +
     geom_ribbon(aes(fill=paste(100*cred.int,"% Cred. Int.",sep=""))) +
     scale_fill_manual(values=c("lightgrey")) +
-    # geom_line(aes(color="Post. mean"),size=0.3) +
+    geom_line(aes(color="Post. mean"),size=0.3) +
     geom_point(aes(color="Post. mean")) +
     scale_color_manual(values="black") +
     xlab("Lag") + ylab("Weight") +
