@@ -5,7 +5,7 @@
 #####################################################################
 
 ecomemGLM = function(formula,family="binomial",data,
-                     mem.vars,var.type=NULL,L,timeID,groupID=NA,
+                     mem.vars,L,timeID,groupID=NA,
                      offset=NULL,starting=NULL,smooth=NULL,
                      n.post=1000,thin=10,burn.in=5000,n.step=5,
                      n.chains=3,parallel=TRUE,max.cpu=NULL,
@@ -123,28 +123,39 @@ ecomemGLM = function(formula,family="binomial",data,
   group.idx = sort(unique(group))
   n.group = length(group.idx)
 
-  # Check var.type
-  if (!is.null(var.type)){
-    if (!all(var.type%in%c("C","D"))){stop("one or more memory covariates are mis-categorized")}
-    check.var.type = length(var.type)
-    if (check.var.type==1){
-      var.type = rep(var.type,p.mem)
-    } else {
-      if (check.var.type!=p.mem){stop("var.type is missing for one or more memory covariates")}
-    }
-  } else {
-    var.type = rep("C",p.mem)
-  }
+  # # Check var.type
+  # if (!is.null(var.type)){
+  #   if (!all(var.type%in%c("C","D"))){stop("one or more memory covariates are mis-categorized")}
+  #   check.var.type = length(var.type)
+  #   if (check.var.type==1){
+  #     var.type = rep(var.type,p.mem)
+  #   } else {
+  #     if (check.var.type!=p.mem){stop("var.type is missing for one or more memory covariates")}
+  #   }
+  # } else {
+  #   var.type = rep("C",p.mem)
+  # }
 
   # Assign variable types to covariates
   aux.vars = main[!main%in%mem.vars]
   aux.vars.C = aux.vars[which(apply(as.matrix(data[,aux.vars]),
                                     2,class)%in%c("numeric","integer"))]
   aux.vars.D = aux.vars[!aux.vars%in%aux.vars.C]
-  mem.vars.C = mem.vars[var.type=="C"]
-  nC = length(mem.vars.C)
-  mem.vars.D = mem.vars[var.type=="D"]
-  nD = length(mem.vars.D)
+  if (!all(apply(as.matrix(data[,mem.vars]),2,class)%in%c("numeric","integer"))){
+    stop("memory variables must be numeric or integer")
+  }
+  mem.vars.D = mem.vars[which(apply(as.matrix(data[,mem.vars]),2,function(x)
+    all(na.omit(x)%in%c(0,1))))]
+  mem.vars.C = mem.vars[!mem.vars%in%mem.vars.D]
+
+  # aux.vars = main[!main%in%mem.vars]
+  # aux.vars.C = aux.vars[which(apply(as.matrix(data[,aux.vars]),
+  #                                   2,class)%in%c("numeric","integer"))]
+  # aux.vars.D = aux.vars[!aux.vars%in%aux.vars.C]
+  # mem.vars.C = mem.vars[var.type=="C"]
+  # nC = length(mem.vars.C)
+  # mem.vars.D = mem.vars[var.type=="D"]
+  # nD = length(mem.vars.D)
 
   # Determine interaction terms including memory variables
   if (inter==TRUE){
@@ -180,46 +191,46 @@ ecomemGLM = function(formula,family="binomial",data,
 
   }
 
-  # Check discrete vars and calculate counts
-  if (nD > 0){
-    if (!all(data[,mem.vars.D]%in%c(NA,0,1))){
-      stop("Non-binary discrete memory covariates specified")}
-    D = array(NA,dim=c(n.group,nD))
-    for (i in 1:n.group){
-      for (j in 1:nD){
-        tmp = data[data[,groupID]==group.idx[i],mem.vars.D[j]]
-        D[i,j] = sum(tmp,na.rm=TRUE)
-      }
-    }
-    colnames(D) = mem.vars.D
-  }
+  # # Check discrete vars and calculate counts
+  # if (nD > 0){
+  #   if (!all(data[,mem.vars.D]%in%c(NA,0,1))){
+  #     stop("Non-binary discrete memory covariates specified")}
+  #   D = array(NA,dim=c(n.group,nD))
+  #   for (i in 1:n.group){
+  #     for (j in 1:nD){
+  #       tmp = data[data[,groupID]==group.idx[i],mem.vars.D[j]]
+  #       D[i,j] = sum(tmp,na.rm=TRUE)
+  #     }
+  #   }
+  #   colnames(D) = mem.vars.D
+  # }
 
   data = data[order(data[,groupID],data[,timeID]),]
-  scaled.X = scale(data[,c(mem.vars.C,aux.vars.C)],center=FALSE)
-  scale.factors = attr(scaled.X,"scaled:scale")
+  scaled.X = scale(data[,c(mem.vars.C,aux.vars.C)])
+  # scale.factors = attr(scaled.X,"scaled:scale")
   if (dim(scaled.X)[2]==1){
     data[,c(mem.vars.C,aux.vars.C)] = as.numeric(scaled.X)
-    names(scale.factors) = c(mem.vars.C,aux.vars.C)
+    # names(scale.factors) = c(mem.vars.C,aux.vars.C)
   } else {
     data[,c(mem.vars.C,aux.vars.C)] = scaled.X
   }
   mod.data = data
 
-  # Define function to calculate time since disturbance
-  tsD = function(t,v,max,n.col){
-    tmp = outer(t,t[v==1&!is.na(v)],"-")
-    tmp[tmp<0|tmp>max] = 9999
-    tmp = cbind(tmp,matrix(9999,nrow(tmp),n.col-ncol(tmp)))
-    return(tmp)
-  }
+  # # Define function to calculate time since disturbance
+  # tsD = function(t,v,max,n.col){
+  #   tmp = outer(t,t[v==1&!is.na(v)],"-")
+  #   tmp[tmp<0|tmp>max] = 9999
+  #   tmp = cbind(tmp,matrix(9999,nrow(tmp),n.col-ncol(tmp)))
+  #   return(tmp)
+  # }
 
-  # Define function to weight discrete data
-  wtD = function(x,w){
-    tmp = matrix(w[x+1],dim(x))
-    tmp[is.na(tmp)] = 0
-    wtd.val = apply(tmp,1,sum)
-    return(wtd.val)
-  }
+  # # Define function to weight discrete data
+  # wtD = function(x,w){
+  #   tmp = matrix(w[x+1],dim(x))
+  #   tmp[is.na(tmp)] = 0
+  #   wtd.val = apply(tmp,1,sum)
+  #   return(wtd.val)
+  # }
 
   #################################################
   #### Fix time lag NA for discrete covariates ####
@@ -227,7 +238,7 @@ ecomemGLM = function(formula,family="binomial",data,
   x.mem.all.obs = lapply(1:length(L),function(i){
     do.call("rbind",lapply(1:n.group,function(j){
       tmp.dat = data[data[,groupID]==group.idx[j],]
-      if (var.type[i]=="C"){
+      # if (var.type[i]=="C"){
         x.lag.mat = t(sapply(1:nrow(tmp.dat),function(k){
           if (!is.na(tmp.dat[k,resp])){
             v = (0:(-L[i])) + tmp.dat[k,timeID]
@@ -242,21 +253,21 @@ ecomemGLM = function(formula,family="binomial",data,
           return(x.vals)
         }))
         storage.mode(x.lag.mat) = "double"
-      } else {
-        x.lag.mat = tsD(tmp.dat[,timeID],tmp.dat[,mem.vars[i]],L[i],
-                        max(D[,mem.vars[i]],na.rm=TRUE))
-        for (k in 1:nrow(tmp.dat)){
-          if (!is.na(tmp.dat[k,resp])){
-            v = (0:(-L[i])) + tmp.dat[k,timeID]
-            if (!all(v%in%tmp.dat[,timeID])){
-              x.lag.mat[k,] = rep(NA,ncol(x.lag.mat))
-            }
-          } else {
-            x.lag.mat[k,] = rep(NA,ncol(x.lag.mat))
-          }
-        }
-        storage.mode(x.lag.mat) = "integer"
-      }
+      # } else {
+      #   x.lag.mat = tsD(tmp.dat[,timeID],tmp.dat[,mem.vars[i]],L[i],
+      #                   max(D[,mem.vars[i]],na.rm=TRUE))
+      #   for (k in 1:nrow(tmp.dat)){
+      #     if (!is.na(tmp.dat[k,resp])){
+      #       v = (0:(-L[i])) + tmp.dat[k,timeID]
+      #       if (!all(v%in%tmp.dat[,timeID])){
+      #         x.lag.mat[k,] = rep(NA,ncol(x.lag.mat))
+      #       }
+      #     } else {
+      #       x.lag.mat[k,] = rep(NA,ncol(x.lag.mat))
+      #     }
+      #   }
+      #   storage.mode(x.lag.mat) = "integer"
+      # }
       return(x.lag.mat)
     }))
   })
@@ -322,7 +333,8 @@ ecomemGLM = function(formula,family="binomial",data,
 
     inputs = list(y=as.double(data[,resp]),family=family,X.fix=X,n=as.integer(n),
                   p=as.integer(p),mem.vars=as.character(mem.vars),
-                  var.type=as.character(var.type),offset=offset,
+                  # var.type=as.character(var.type),
+                  offset=offset,
                   p.mem=as.integer(p.mem),L=as.integer(L),x.lag=x.mem,
                   bf=bf,tau.sq=as.double(smooth),update.smooth=FALSE,
                   inter=inter,inter.terms=inter.terms,inter.vars=inter.vars,
@@ -334,7 +346,8 @@ ecomemGLM = function(formula,family="binomial",data,
 
     inputs = list(y=as.double(data[,resp]),family=family,X.fix=X,n=as.integer(n),
                   p=as.integer(p),mem.vars=as.character(mem.vars),
-                  var.type=as.character(var.type),offset=offset,
+                  # var.type=as.character(var.type),
+                  offset=offset,
                   p.mem=as.integer(p.mem),L=as.integer(L),x.lag=x.mem,
                   bf=bf,update.smooth=TRUE,inter=inter,inter.terms=inter.terms,
                   inter.vars=inter.vars,n.post=as.integer(n.post),thin=as.integer(thin),
@@ -423,11 +436,11 @@ ecomemGLM = function(formula,family="binomial",data,
       }
       X=inputs[[1]]$X.fix
       X[,inputs[[1]]$mem.vars] = sapply(1:inputs[[1]]$p.mem,function(j){
-        if (inputs[[1]]$var.type[j]=="C"){
+        # if (inputs[[1]]$var.type[j]=="C"){
           inputs[[1]]$x.lag[[j]]%*%starting[[i]]$mem[[j]]$w
-        } else {
-          wtD(inputs[[1]]$x.lag[[j]],starting[[i]]$mem[[j]]$w)
-        }
+        # } else {
+        #   wtD(inputs[[1]]$x.lag[[j]],starting[[i]]$mem[[j]]$w)
+        # }
       })
       if (inter==TRUE){
         X[,inter.terms] = sapply(1:length(inter.vars),function(j){
@@ -472,11 +485,11 @@ ecomemGLM = function(formula,family="binomial",data,
         })
         names(mem) = inputs$mem.vars
         X.start[,inputs$mem.vars] = sapply(1:inputs$p.mem,function(j){
-          if (inputs$var.type[j]=="C"){
+          # if (inputs$var.type[j]=="C"){
             inputs$x.lag[[j]]%*%mem[[j]]$w
-          } else {
-            wtD(inputs$x.lag[[j]],mem[[j]]$w)
-          }
+          # } else {
+          #   wtD(inputs$x.lag[[j]],mem[[j]]$w)
+          # }
         })
         if (inter==TRUE){
           X.start[,inter.terms] = sapply(1:length(inter.vars),function(j){
@@ -574,16 +587,16 @@ ecomemGLM = function(formula,family="binomial",data,
 
   if (isTRUE(inputs.only)){
     out = list(inputs=mcmc.inputs,data=mod.data,n=n,
-               scale.factors=scale.factors,pred.vars=pred.vars,
+               pred.vars=pred.vars,
                mem.vars=mem.vars)
   } else {
     if (n.chains>1){
       out = list(post.samps=mod.out,data=mod.data,n=n,
-                 scale.factors=scale.factors,pred.vars=pred.vars,
+                 pred.vars=pred.vars,
                  mem.vars=mem.vars)
     } else {
       out = list(post.samps=mod.out[[1]],data=mod.data,n=n,
-                 scale.factors=scale.factors,pred.vars=pred.vars,
+                 pred.vars=pred.vars,
                  mem.vars=mem.vars)
     }
   }

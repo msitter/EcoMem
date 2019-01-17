@@ -3,24 +3,24 @@
 # April 13, 2018
 
 ecomemGLMMCMC = function(x){
-  
+
   #### Define general functions ####
-  
+
   # Define MVN function
   Rmvn = function(mu,S){
     x = rnorm(length(mu))
     y = mu + crossprod(chol(S),x)
     return(as.numeric(y))
   }
-  
-  # Define function to weight discrete data
-  wtD = function(x,w){
-    tmp = matrix(w[x+1],dim(x))
-    tmp[is.na(tmp)] = 0
-    wtd.val = apply(tmp,1,sum)
-    return(wtd.val)
-  }
-  
+
+  # # Define function to weight discrete data
+  # wtD = function(x,w){
+  #   tmp = matrix(w[x+1],dim(x))
+  #   tmp[is.na(tmp)] = 0
+  #   wtd.val = apply(tmp,1,sum)
+  #   return(wtd.val)
+  # }
+
   # Define inverse-link function
   inv.link = function(b){
     if (family=="poisson"){
@@ -29,9 +29,9 @@ ecomemGLMMCMC = function(x){
       1/(1+exp(-X%*%b))
     }
   }
-  
+
   #### Define log-likelihood functions ####
-  
+
   # Log-likelihood data
   ll.y = function(Z){
     if (family=="poisson"){
@@ -43,7 +43,7 @@ ecomemGLMMCMC = function(x){
     }
     return(as.numeric(l))
   }
-  
+
   # Log-likelihood beta
   ll.beta = function(a,b){
     if (family=="poisson"){
@@ -53,38 +53,38 @@ ecomemGLMMCMC = function(x){
     }
     return(as.numeric(l))
   }
-  
+
   # Log-target density tau
   ll.tau = function(v,k,z,S){
     l = -(k-1)*log(v) - (1/(2*(v^2)))*crossprod(z,S%*%z) -
       ((nu+1)/2)*log(1+(1/nu)*((v/A)^2))
     return(as.numeric(l))
   }
-  
+
   #### Load MCMC inputs ####
-  
+
   chain = x$chain
-  
+
   # Load inputs
   for (i in 1:length(x$inputs)){
     tmp = x$inputs[[i]]
     assign(names(x$inputs)[i],tmp)
   }
-  
+
   # Load priors
   for (i in 1:length(x$priors)){
     tmp = x$priors[[i]]
     assign(names(x$priors)[i],tmp)
   }
-  
+
   # Load starting values
   for (i in 1:length(x$starting)){
     tmp = x$starting[[i]]
     assign(names(x$starting)[i],tmp)
   }
-  
+
   #### Setup MCMC ####
-  
+
   # MCMC tracking/adaptive parameters
   n.iter = n.post*thin + burn.in
   n.save = (n.iter-burn.in)/thin
@@ -93,7 +93,7 @@ ecomemGLMMCMC = function(x){
   track = seq(n.block,n.iter,n.block)
   n.batch = 50
   adapt.step = seq(n.batch,n.iter,n.batch)
-  
+
   # Define data arrays
   beta.sim = array(NA,dim=c(n.save,p))
   beta.track = array(0,dim=c(n.iter,p))
@@ -108,23 +108,23 @@ ecomemGLMMCMC = function(x){
     X.sim = array(NA,dim=c(n.save,n,p))
     tau.sq.sim = array(NA,dim=c(n.save,p.mem))
   }
-  
+
   theta = rep(NA,p.mem)
-  
+
   #### Run MCMC sampler ####
-  
+
   for (iter in 1:n.iter){
-    
+
     ###########################
     #### Update parameters ####
     ###########################
-    
+
     #### Update memory functions ####
-    
+
     if (p.mem > 0){
-      
+
       #### Update antecedent weights ####
-      
+
       # Loop over p.mem
       for (i in 1:p.mem){
         eta.curr = mem[[i]]$eta
@@ -139,11 +139,11 @@ ecomemGLMMCMC = function(x){
           tmp = exp(bf[[i]]$H%*%eta.star)
           w.star = as.numeric(tmp/sum(tmp))
           X.star = X
-          if (var.type[i]=="C"){
+          # if (var.type[i]=="C"){
             X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
-          } else {
-            X.star[,mem.vars[i]] = wtD(x.lag[[i]],w.star)
-          }
+          # } else {
+          #   X.star[,mem.vars[i]] = wtD(x.lag[[i]],w.star)
+          # }
           if (inter==TRUE){
             for (l in 1:length(inter.vars)){
               X.star[,inter.terms[l]] = apply(X.star[,inter.vars[[l]]],1,prod)
@@ -166,11 +166,11 @@ ecomemGLMMCMC = function(x){
               tmp = exp(bf[[i]]$H%*%eta.star)
               w.star = as.numeric(tmp/sum(tmp))
               X.star = X
-              if (var.type[i]=="C"){
+              # if (var.type[i]=="C"){
                 X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
-              } else {
-                X.star[,mem.vars[i]] = wtD(x.lag[[i]],w.star)
-              }
+              # } else {
+              #   X.star[,mem.vars[i]] = wtD(x.lag[[i]],w.star)
+              # }
               if (inter==TRUE){
                 for (l in 1:length(inter.vars)){
                   X.star[,inter.terms[l]] = apply(X.star[,inter.vars[[l]]],1,prod)
@@ -201,9 +201,9 @@ ecomemGLMMCMC = function(x){
         mem[[i]]$w = w.curr
         X = X.curr
       }
-      
+
       #### Update smoothing parameters ####
-      
+
       if (update.smooth==TRUE){
         for (i in 1:p.mem){
           tau.star = exp(rnorm(1,log(tau[i]),tau.tune[i]))
@@ -215,11 +215,11 @@ ecomemGLMMCMC = function(x){
           }
         }
       }
-      
+
     }
-    
+
     #### Update regression coefficients ####
-    
+
     ld.curr = ll.beta(alpha,beta)
     for (i in 1:p){
       beta.i.curr = beta[i]
@@ -235,14 +235,14 @@ ecomemGLMMCMC = function(x){
         beta[i] = beta.i.curr
       }
     }
-    
+
     #########################
     #### Adaptation Step ####
     #########################
-    
+
     if (iter %in% adapt.step){
       delta.n = min(0.1,1/sqrt(which(adapt.step %in% iter)))
-      
+
       #### Update tuning variance for tau ####
       if (update.smooth==TRUE){
         tau.rate = apply(as.matrix(tau.track[(iter-(n.batch-1)):iter,]),2,mean)
@@ -254,7 +254,7 @@ ecomemGLMMCMC = function(x){
           }
         }
       }
-      
+
       #### Update tuning variance for beta ####
       beta.rate = apply(as.matrix(beta.track[(iter-(n.batch-1)):iter,]),2,mean)
       for (i in 1:p){
@@ -264,15 +264,15 @@ ecomemGLMMCMC = function(x){
           beta.tune[i] = exp(log(beta.tune[i])-delta.n)
         }
       }
-      
+
     }
-    
+
     ######################
     #### Save & Track ####
     ######################
-    
+
     #### Save Samples ####
-    
+
     if (iter %in% iter2save){
       idx = which(iter2save %in% iter)
       beta.sim[idx,] = beta
@@ -287,16 +287,16 @@ ecomemGLMMCMC = function(x){
         X.sim[idx,,] = X
       }
     }
-    
+
     #### Track progress ####
-    
+
     if (iter %in% track){
       cat("\n","Chain",chain,"of",n.chains,
           "\n",paste(iter/n.iter*100,"%",sep=""),"complete","\n")
     }
-    
+
   } # end MCMC loop
-  
+
   if (p.mem > 0){
     if (update.smooth==TRUE){
       return(list(beta=beta.sim,eta=eta.sim,w=wts.sim,
@@ -307,5 +307,5 @@ ecomemGLMMCMC = function(x){
   } else {
     return(list(beta=beta.sim))
   }
-  
+
 } # end function

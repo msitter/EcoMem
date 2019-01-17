@@ -188,11 +188,11 @@ ecomem = function(formula,data,mem.vars,
   # }
 
   data = data[order(data[,groupID],data[,timeID]),]
-  scaled.X = scale(data[,c(mem.vars.C,aux.vars.C)],center=FALSE)
-  scale.factors = attr(scaled.X,"scaled:scale")
+  scaled.X = scale(data[,c(mem.vars.C,aux.vars.C)])
+  # scale.factors = attr(scaled.X,"scaled:scale")
   if (dim(scaled.X)[2]==1){
     data[,c(mem.vars.C,aux.vars.C)] = as.numeric(scaled.X)
-    names(scale.factors) = c(mem.vars.C,aux.vars.C)
+    # names(scale.factors) = c(mem.vars.C,aux.vars.C)
   } else {
     data[,c(mem.vars.C,aux.vars.C)] = scaled.X
   }
@@ -331,8 +331,8 @@ ecomem = function(formula,data,mem.vars,
 
   nu = 4
   A = 0.1
-  a.y = 1e-05
-  b.y = 1e05
+  a.y = 1e-07
+  b.y = 1e07
   sig2.0 = 1e07
 
   priors = list(nu=nu,A=A,a.y=a.y,b.y=b.y,sig2.0=sig2.0)
@@ -546,16 +546,16 @@ ecomem = function(formula,data,mem.vars,
 
   if (isTRUE(inputs.only)){
     out = list(inputs=mcmc.inputs,data=mod.data,n=n,
-               scale.factors=scale.factors,pred.vars=pred.vars,
+               pred.vars=pred.vars,
                mem.vars=mem.vars)
   } else {
     if (n.chains>1){
       out = list(post.samps=mod.out,data=mod.data,n=n,
-                 scale.factors=scale.factors,pred.vars=pred.vars,
+                 pred.vars=pred.vars,
                  mem.vars=mem.vars)
     } else {
       out = list(post.samps=mod.out[[1]],data=mod.data,n=n,
-                 scale.factors=scale.factors,pred.vars=pred.vars,
+                 pred.vars=pred.vars,
                  mem.vars=mem.vars)
     }
   }
