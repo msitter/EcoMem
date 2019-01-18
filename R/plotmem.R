@@ -38,6 +38,6 @@ plotmem = function(x,cred.int=0.95,...){
     theme(legend.title=element_blank(),
           legend.spacing.y=unit(0.1,"pt"))
 
-  print(p)
+  return(p)
 
 }
