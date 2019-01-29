@@ -6,7 +6,7 @@
 \code{\link{ecomemGLMMCMC}} which implements Markov chain Monte Carlo (MCMC) simulation to fit a Bayesian hierarchical model estimating ecological memory.}
 
 \usage{
-ecomem(formula, family = "binomial", data, mem.vars, var.type = NULL,
+ecomem(formula, family = "binomial", data, mem.vars,
        L, timeID, groupID = NA, offset, starting = NULL,
        smooth = NULL, n.post = 1000, thin = 10, burn.in = 5000,
        n.step = 5, n.chains = 3, parallel = TRUE, max.cpu = NULL,
@@ -24,10 +24,6 @@ ecomem(formula, family = "binomial", data, mem.vars, var.type = NULL,
   \item{mem.vars}{an optional character vector indicating the subset of explanatory
   variables for which ecological memory functions should be estimated (memory
   variables).}
-  \item{var.type}{an optional character vector specifying the structure of memory
-  variables. If non-\code{NULL}, values should be "\code{C}" for continuous or
-  "\code{D}" for discrete (i.e., binary). The default setting is all memory
-  variables are continuous.}
   \item{L}{an integer or an integer vector specifying the maximum lag for memory
   variables. If a vector is specified, its dimension must match the number of memory
   variables specified in \code{mem.vars}.}
@@ -95,10 +91,6 @@ non-\code{NULL}) within \code{data} should be set to \code{NA}. Otherwise,
 the first \code{\link[base]{max(L)}} response observations within each
 group will not be evaluated as part of the regression model.
 
-If \code{var.type = "D"}, the explanatory variable must consist of binary (0/1)
-integer values with 1 indicating the occurrence of an event (e.g.,
-disturbance/stress event) and 0 indicating no event occurrence.
-}
 \value{
 An object of class \code{ecomem}, which is a list with the following elements:
 \item{post.samps}{a list of posterior samples with length equal to \code{n.chains}.
@@ -114,9 +106,8 @@ a response variable with the first \code{\link[base]{max(L)}} within each group 
 to \code{NA} and scaled values for all continuous explanatory variables.}
 \item{n}{an integer value indicating the number of reponse observations used to fit
 the regression model across all groups.}
-\item{scale.factors}{a named numeric vector containing the factors used to scale
-explanatory variables. Names correspond to model variables.}
 }
+
 \references{
 %% ~put references to the literature/web site here ~
 }
