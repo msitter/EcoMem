@@ -1,6 +1,3 @@
-# Load the shared object
-useDynLib(EcoMem)
-
 # Exports
 export(ecomem)
 export(ecomemGLM)
