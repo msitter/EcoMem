@@ -29,7 +29,8 @@ Imports:
     mgcv,
     snow,
     snowfall,
-    rlecuyer
+    rlecuyer,
+    ggplot2,
+    coda
 Suggests: 
-    coda,
-    ggplot2
+    plyr

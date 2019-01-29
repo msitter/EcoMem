@@ -29,14 +29,6 @@ ecomemMCMC = function(x){
     return(as.numeric(y))
   }
 
-  # # weight discrete data
-  # wtD = function(x,w){
-  #   tmp = matrix(w[x+1],dim(x))
-  #   tmp[is.na(tmp)] = 0
-  #   wtd.val = apply(tmp,1,sum)
-  #   return(wtd.val)
-  # }
-
   #### Define log-likelihood functions ####
 
   # Log-likelihood data
@@ -106,10 +98,7 @@ ecomemMCMC = function(x){
     names(eta.sim) = names(wts.sim) = mem.vars
     X.sim = array(NA,dim=c(n.save,n*p))
     tau.sq.sim = array(NA,dim=c(n.save,p.mem))
-    theta.sim = array(NA,dim=c(n.save,p.mem))
   }
-
-  theta = rep(NA,p.mem)
 
   #### Run MCMC sampler ####
 
@@ -133,17 +122,13 @@ ecomemMCMC = function(x){
         for (j in 1:n.step){
           ll.thresh = ll.y(X.curr) + log(runif(1))
           xi = backsolve((1/tau[i])*bf[[i]]$U,rnorm(bf[[i]]$k))
-          theta[i] = runif(1)*(2*pi)
-          I = c(theta[i]-(2*pi),theta[i])
-          eta.star = (cos(theta[i]))*eta.curr + (sin(theta[i]))*xi
+          theta = runif(1)*(2*pi)
+          I = c(theta-(2*pi),theta)
+          eta.star = (cos(theta))*eta.curr + (sin(theta))*xi
           tmp = exp(bf[[i]]$H%*%eta.star)
           w.star = as.numeric(tmp/sum(tmp))
           X.star = X
-          # if (var.type[i]=="C"){
-            X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
-          # } else {
-          #   X.star[,mem.vars[i]] = wtD(x.lag[[i]],w.star)
-          # }
+          X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
           if (inter==TRUE){
             for (l in 1:length(inter.vars)){
               X.star[,inter.terms[l]] = apply(X.star[,inter.vars[[l]]],1,prod)
@@ -159,26 +144,22 @@ ecomemMCMC = function(x){
             w.curr = w.star
             X.curr = X.star
           } else {
-            if (theta[i] < 0){
-              I[1] = theta[i]
-            } else if (theta[i] > 0){
-              I[2] = theta[i]
+            if (theta < 0){
+              I[1] = theta
+            } else if (theta > 0){
+              I[2] = theta
             } else {
               warning("antecedent weights not updated",immediate.=TRUE)
               break()
             }
             val = 1
             while (val>0){
-              theta[i] = runif(1,I[1],I[2])
-              eta.star = (cos(theta[i]))*eta.curr + (sin(theta[i]))*xi
+              theta = runif(1,I[1],I[2])
+              eta.star = (cos(theta))*eta.curr + (sin(theta))*xi
               tmp = exp(bf[[i]]$H%*%eta.star)
               w.star = as.numeric(tmp/sum(tmp))
               X.star = X
-              # if (var.type[i]=="C"){
-                X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
-              # } else {
-              #   X.star[,mem.vars[i]] = wtD(x.lag[[i]],w.star)
-              # }
+              X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
               if (inter==TRUE){
                 for (l in 1:length(inter.vars)){
                   X.star[,inter.terms[l]] = apply(X.star[,inter.vars[[l]]],1,prod)
@@ -194,10 +175,10 @@ ecomemMCMC = function(x){
                 w.curr = w.star
                 X.curr = X.star
                 val = 0
-              } else if (theta[i] < 0){
-                I[1] = theta[i]
-              } else if (theta[i] > 0){
-                I[2] = theta[i]
+              } else if (theta < 0){
+                I[1] = theta
+              } else if (theta > 0){
+                I[2] = theta
               } else {
                 warning("antecedent weights not updated",immediate.=TRUE)
                 break()

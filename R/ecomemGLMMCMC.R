@@ -13,14 +13,6 @@ ecomemGLMMCMC = function(x){
     return(as.numeric(y))
   }
 
-  # # Define function to weight discrete data
-  # wtD = function(x,w){
-  #   tmp = matrix(w[x+1],dim(x))
-  #   tmp[is.na(tmp)] = 0
-  #   wtd.val = apply(tmp,1,sum)
-  #   return(wtd.val)
-  # }
-
   # Define inverse-link function
   inv.link = function(b){
     if (family=="poisson"){
@@ -109,8 +101,6 @@ ecomemGLMMCMC = function(x){
     tau.sq.sim = array(NA,dim=c(n.save,p.mem))
   }
 
-  theta = rep(NA,p.mem)
-
   #### Run MCMC sampler ####
 
   for (iter in 1:n.iter){
@@ -133,14 +123,14 @@ ecomemGLMMCMC = function(x){
         for (j in 1:n.step){
           ll.thresh = ll.y(X.curr) + log(runif(1))
           xi = backsolve((1/tau[i])*bf[[i]]$U,rnorm(bf[[i]]$k))
-          theta[i] = runif(1)*(2*pi)
-          I = c(theta[i]-(2*pi),theta[i])
-          eta.star = (cos(theta[i]))*eta.curr + (sin(theta[i]))*xi
+          theta = runif(1)*(2*pi)
+          I = c(theta-(2*pi),theta)
+          eta.star = (cos(theta))*eta.curr + (sin(theta))*xi
           tmp = exp(bf[[i]]$H%*%eta.star)
           w.star = as.numeric(tmp/sum(tmp))
           X.star = X
           # if (var.type[i]=="C"){
-            X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
+          X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
           # } else {
           #   X.star[,mem.vars[i]] = wtD(x.lag[[i]],w.star)
           # }
@@ -161,13 +151,13 @@ ecomemGLMMCMC = function(x){
           } else {
             val = 1
             while (val>0){
-              theta[i] = runif(1,I[1],I[2])
-              eta.star = (cos(theta[i]))*eta.curr + (sin(theta[i]))*xi
+              theta = runif(1,I[1],I[2])
+              eta.star = (cos(theta))*eta.curr + (sin(theta))*xi
               tmp = exp(bf[[i]]$H%*%eta.star)
               w.star = as.numeric(tmp/sum(tmp))
               X.star = X
               # if (var.type[i]=="C"){
-                X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
+              X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
               # } else {
               #   X.star[,mem.vars[i]] = wtD(x.lag[[i]],w.star)
               # }
@@ -186,10 +176,10 @@ ecomemGLMMCMC = function(x){
                 w.curr = w.star
                 X.curr = X.star
                 val = 0
-              } else if (theta[i] < 0){
-                I[1] = theta[i]
-              } else if (theta[i] > 0){
-                I[2] = theta[i]
+              } else if (theta < 0){
+                I[1] = theta
+              } else if (theta > 0){
+                I[2] = theta
               } else {
                 warning("antecedent weights not updated",immediate.=TRUE)
                 break()
@@ -300,7 +290,7 @@ ecomemGLMMCMC = function(x){
   if (p.mem > 0){
     if (update.smooth==TRUE){
       return(list(beta=beta.sim,eta=eta.sim,w=wts.sim,
-                          X=X.sim,tau.sq=tau.sq.sim))
+                  X=X.sim,tau.sq=tau.sq.sim))
     } else {
       return(list(beta=beta.sim,eta=eta.sim,w=wts.sim,X=X.sim))
     }
