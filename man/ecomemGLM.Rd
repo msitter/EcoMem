@@ -71,58 +71,52 @@ ecomem(formula, family = "binomial", data, mem.vars,
   \item{...}{currently no additional arguments.}
 }
 \details{
-Unequally-spaced time points are not supported. The \code{timeID}
-variable should include equally-spaced, sequential time points within each group.
-Modeled time periods for different groups may be non-overlapping, but the spacing
-of time points \emph{must} be consistent among groups. Time points with \code{NA}
-values for the response and/or explanatory variables are dropped from the analysis.
-\code{NA} values are not supported in the \code{timeID} and \code{groupID}
-index variables.
+  Unequally-spaced time points are not supported. The \code{timeID}
+  variable should include equally-spaced, sequential time points within each group.
+  Modeled time periods for different groups may be non-overlapping, but the spacing
+  of time points \emph{must} be consistent among groups. Time points with \code{NA}
+  values for the response and/or explanatory variables are dropped from the analysis.
+  \code{NA} values are not supported in the \code{timeID} and \code{groupID}
+  index variables.
 
-Explanatory variable observations for \code{L} time points prior to the
-response are needed to fit the regression model when estimating ecological
-memory functions for a subset of covariates. If explanatory variable observations
-are not available for \code{L} time points prior to the response, the observation
-is not evaluated as part of the regression model. This is particularly important
-during model initialization. If explanatory variable observations
-are available prior to the initial response (first time point), the first
-\code{\link[base]{max(L)}} responses for each group (if \code{groupID} is
-non-\code{NULL}) within \code{data} should be set to \code{NA}. Otherwise,
-the first \code{\link[base]{max(L)}} response observations within each
-group will not be evaluated as part of the regression model.
+  Explanatory variable observations for \code{L} time points prior to the
+  response are needed to fit the regression model when estimating ecological
+  memory functions for a subset of covariates. If explanatory variable observations
+  are not available for \code{L} time points prior to the response, the observation
+  is not evaluated as part of the regression model. This is particularly important
+  during model initialization. If explanatory variable observations
+  are available prior to the initial response (first time point), the first
+  \code{max(L)} responses for each group (if \code{groupID} is
+  non-\code{NULL}) within \code{data} should be set to \code{NA}. Otherwise,
+  the first \code{max(L)} response observations within each
+  group will not be evaluated as part of the regression model.
+}
 
 \value{
-An object of class \code{ecomem}, which is a list with the following elements:
-\item{post.samps}{a list of posterior samples with length equal to \code{n.chains}.
-Each element is a named list with names corresponding to model parameters
-(\code{beta}, \code{sig.y}, \code{eta}, \code{w}, \code{X.tilde}, \code{tau.sq}).
-Returned only if \code{inputs.only = FALSE} (default).}
-\item{inputs}{a list of MCMC inputs with length equal to \code{n.chains}. Each
-element is a named list containing \code{inputs}, \code{priors}, and
-\code{starting} to be passed to \code{\link{ecomemMCMC}}. Returned only if
-\code{inputs.only = TRUE}.}
-\item{data}{a data frame containing data used to fit the regression model including
-a response variable with the first \code{\link[base]{max(L)}} within each group set
-to \code{NA} and scaled values for all continuous explanatory variables.}
-\item{n}{an integer value indicating the number of reponse observations used to fit
-the regression model across all groups.}
+  An object of class \code{ecomem}, which is a list with the following elements:
+  \item{post.samps}{a list of posterior samples with length equal to \code{n.chains}.
+  Each element is a named list with names corresponding to model parameters
+  (\code{beta}, \code{sig.y}, \code{eta}, \code{w}, \code{X.tilde}, \code{tau.sq}).
+  Returned only if \code{inputs.only = FALSE} (default).}
+  \item{inputs}{a list of MCMC inputs with length equal to \code{n.chains}. Each
+  element is a named list containing \code{inputs}, \code{priors}, and
+  \code{starting} to be passed to \code{\link{ecomemMCMC}}. Returned only if
+  \code{inputs.only = TRUE}.}
+  \item{data}{a data frame containing data used to fit the regression model including
+  a response variable with the first \code{max(L)} within each group set
+  to \code{NA} and scaled values for all continuous explanatory variables.}
+  \item{n}{an integer value indicating the number of reponse observations used to fit
+  the regression model across all groups.}
 }
 
-\references{
-%% ~put references to the literature/web site here ~
-}
 \author{
-%%  ~~who you are~~
+  Malcolm S. Itter \email{malcolm.itter@helsinki.fi}
 }
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
+  \code{\link{ecomem}}
 }
+
 \examples{
 \dontrun{
 
@@ -252,10 +246,5 @@ coef.summ = memsum(mod)
 
 p = plotmem(mod)
 print(p)
-
 }
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }% use one of  RShowDoc("KEYWORDS")
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

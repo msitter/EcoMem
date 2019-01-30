@@ -80,9 +80,9 @@ ecomem(formula, data, mem.vars, L, timeID, groupID = NA,
   is not evaluated as part of the regression model. This is particularly important
   during model initialization. If explanatory variable observations
   are available prior to the initial response (first time point), the first
-  \code{\link[base]{max(L)}} responses for each group (if \code{groupID} is
+  \code{max(L)} responses for each group (if \code{groupID} is
   non-\code{NULL}) within \code{data} should be set to \code{NA}. Otherwise,
-  the first \code{\link[base]{max(L)}} response observations within each
+  the first \code{max(L)} response observations within each
   group will not be evaluated as part of the regression model.
 }
 
@@ -97,7 +97,7 @@ ecomem(formula, data, mem.vars, L, timeID, groupID = NA,
   \code{starting} to be passed to \code{\link{ecomemMCMC}}. Returned only if
   \code{inputs.only = TRUE}.}
   \item{data}{a data frame containing data used to fit the regression model including
-  a response variable with the first \code{\link[base]{max(L)}} within each group set
+  a response variable with the first \code{max(L)} within each group set
   to \code{NA} and scaled values for all continuous explanatory variables.}
   \item{n}{an integer value indicating the number of reponse observations used to fit
   the regression model across all groups.}
@@ -113,6 +113,7 @@ ecomem(formula, data, mem.vars, L, timeID, groupID = NA,
 
 \examples{
 \dontrun{
+
 ####################################
 #### Continuous covariate ##########
 ####################################

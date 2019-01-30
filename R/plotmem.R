@@ -26,17 +26,20 @@ plotmem = function(x,cred.int=0.95,...){
   }))
 
   # plot memory functions
-  p = ggplot2::ggplot(aes(x=lag,y=mean,ymin=lwr,ymax=upr),data=w.post) +
-    geom_ribbon(aes(fill=paste(100*cred.int,"% Cred. Int.",sep=""))) +
-    scale_fill_manual(values=c("lightgrey")) +
-    geom_line(aes(color="Post. mean"),size=0.3) +
-    geom_point(aes(color="Post. mean")) +
-    scale_color_manual(values="black") +
-    xlab("Lag") + ylab("Weight") +
-    facet_wrap(~var,scale="free") +
-    theme_bw() +
-    theme(legend.title=element_blank(),
-          legend.spacing.y=unit(0.1,"pt"))
+  p = ggplot2::ggplot(ggplot2::aes(x=lag,y=mean,ymin=lwr,
+                                   ymax=upr),data=w.post) +
+    ggplot2::geom_ribbon(ggplot2::aes(fill=paste(
+      100*cred.int,"% Cred. Int.",sep=""))) +
+    ggplot2::scale_fill_manual(values=c("lightgrey")) +
+    ggplot2::geom_line(ggplot2::aes(color="Post. mean"),
+                       size=0.3) +
+    ggplot2::geom_point(ggplot2::aes(color="Post. mean")) +
+    ggplot2::scale_color_manual(values="black") +
+    ggplot2::xlab("Lag") + ggplot2::ylab("Weight") +
+    ggplot2::facet_wrap(~var,scale="free") +
+    ggplot2::theme_bw() +
+    ggplot2::theme(legend.title=ggplot2::element_blank(),
+          legend.spacing.y=ggplot2::unit(0.1,"pt"))
 
   return(p)
 

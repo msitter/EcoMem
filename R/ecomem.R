@@ -420,7 +420,7 @@ ecomem = function(formula,data,mem.vars,
         "to",timeframe[length(timeframe)],"\n")
   } else {
     cat("\n","---Generating MCMC inputs---","\n",
-        "Running in parallel:",parallel,"\n",
+        "Number of chains:",n.chains,"\n",
         "Number of posterior samples:",n.post,"\n",
         "Thin interval:",thin,"\n",
         "Burn-in length:",burn.in,"\n",
