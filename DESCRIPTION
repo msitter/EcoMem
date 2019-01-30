@@ -25,9 +25,9 @@ Depends: R (>= 3.5.1)
 Encoding: UTF-8
 LazyData: true
 License: GPL (>= 2)
+Depends: Depends: R (>= 3.5.1), snow
 Imports: 
     mgcv,
-    snow,
     rlecuyer,
     snowfall,
     ggplot2,
