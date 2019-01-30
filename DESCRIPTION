@@ -27,11 +27,10 @@ LazyData: true
 License: GPL (>= 2)
 Imports: 
     mgcv,
+    snow,
+    rlecuyer,
     snowfall,
     ggplot2,
     coda
-Depends:
-    snow,
-    rlecuyer
 Suggests: 
     plyr

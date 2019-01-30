@@ -10,3 +10,5 @@ export(plotmem)
 # Imports
 importFrom("stats","formula","model.matrix","lm","glm","coef",
            "median","quantile","rnorm","runif")
+
+importFrom("snow","setDefaultClusterOptions")

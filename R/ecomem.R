@@ -11,7 +11,7 @@ ecomem = function(formula,data,mem.vars,
                   inputs.only=FALSE,...){
 
   options(stringsAsFactors=FALSE)
-  setDefaultClusterOptions(type="SOCK")
+  snow::setDefaultClusterOptions(type="SOCK")
 
   ######################################################################
   #### Check for unused arguments ######################################
