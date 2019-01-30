@@ -84,6 +84,7 @@ ecomem(formula, data, mem.vars, L, timeID, groupID = NA,
   non-\code{NULL}) within \code{data} should be set to \code{NA}. Otherwise,
   the first \code{\link[base]{max(L)}} response observations within each
   group will not be evaluated as part of the regression model.
+}
 
 \value{
   An object of class \code{ecomem}, which is a list with the following elements:
