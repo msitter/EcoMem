@@ -21,12 +21,13 @@ Description: Quantifies ecological memory functions for a subset
     as part of a Bayesian hierarchical model, which utilizes 
     Markov chain Monte Carlo (MCMC) simulation to sample from 
     the joint posterior distibution.
-Depends: R (>= 3.5.1), snow
+Depends: R (>= 3.5.1)
 Encoding: UTF-8
 LazyData: true
 License: GPL (>= 2)
 Imports: 
     mgcv,
+    snow,
     snowfall,
     ggplot2,
     coda

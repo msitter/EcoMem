@@ -8,5 +8,7 @@ export(memsum)
 export(plotmem)
 
 # Imports
+import(snow)
+
 importFrom("stats","formula","model.matrix","lm","glm","coef",
            "median","quantile","rnorm","runif")
