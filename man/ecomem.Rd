@@ -179,22 +179,6 @@ print(p)
 #### Discrete covariate ############
 ####################################
 
-## Define function to calculate time since events
-tsD = function(t,v,max,n.col){
-  tmp = outer(t,t[v==1],"-")
-  tmp[tmp<0|tmp>max] = 9999
-  tmp = cbind(tmp,matrix(9999,nrow(tmp),n.col-ncol(tmp)))
-  return(tmp)
-}
-
-## Define function to weight event data
-wtD = function(x,w){
-  tmp = matrix(w[x+1],dim(x))
-  tmp[is.na(tmp)] = 0
-  wtd.val = apply(tmp,1,sum)
-  return(wtd.val)
-}
-
 ## Simulate some time series data
 
 set.seed(1)
@@ -214,14 +198,13 @@ w = exp(-0.95*(0:L))/sum(exp(-0.95*(0:L)))
 # Simulate a single binary covariate
 x = rbinom(TT,1,0.05)
 
-# Calculate event counts
-nx = sum(x)
-
-# Form matrix with time since event values
-tsd.vals = tsD(1:TT,x,L,nx)[(L+1):TT,]
+# Form matrix containing lagged covariate values
+x.lag = t(sapply(1:n,function(i){
+  x[(L+1):1 + i - 1]
+}))
 
 # Calculate weighted covariate values
-x.tilde = wtD(tsd.vals,w)
+x.tilde = x.lag\%*\%w
 
 # Form design matrix
 X = cbind(rep(1,n),x.tilde)
