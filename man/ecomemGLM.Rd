@@ -172,7 +172,7 @@ data = data.frame(time=1:TT,x=x,y=y,n.trials=c(rep(NA,L),n.trials))
 ## Run ecomem function
 
 mod = ecomemGLM(y~x,family="binomial",data=data,mem.vars="x",L=L,
-                timeID="time",offset="n.trials")
+                timeID="time",offset="n.trials",n.step=10)
 
 ## Assess model convergence
 
