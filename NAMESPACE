@@ -8,7 +8,7 @@ export(memsum)
 export(plotmem)
 
 # Imports
-import(snow, rlecuyer)
+import(snow, rlecuyer, snowfall)
 
 
 importFrom("stats","formula","model.matrix","lm","glm","coef",
