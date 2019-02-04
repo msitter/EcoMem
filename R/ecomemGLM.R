@@ -12,7 +12,7 @@ ecomemGLM = function(formula,family="binomial",data,
                      inputs.only=FALSE,...){
 
   options(stringsAsFactors=FALSE)
-  setDefaultClusterOptions(type="SOCK")
+  snow::setDefaultClusterOptions(type="SOCK")
 
   ######################################################################
   #### Check for unused arguments ######################################
