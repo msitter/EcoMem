@@ -260,7 +260,7 @@ ecomem = function(formula,data,mem.vars,
 
   nu = 4
   A = 0.1
-  a.y = 1e-07
+  a.y = 0
   b.y = 1e07
   sig2.0 = 1e07
 

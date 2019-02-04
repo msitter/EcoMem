@@ -129,11 +129,7 @@ ecomemGLMMCMC = function(x){
           tmp = exp(bf[[i]]$H%*%eta.star)
           w.star = as.numeric(tmp/sum(tmp))
           X.star = X
-          # if (var.type[i]=="C"){
           X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
-          # } else {
-          #   X.star[,mem.vars[i]] = wtD(x.lag[[i]],w.star)
-          # }
           if (inter==TRUE){
             for (l in 1:length(inter.vars)){
               X.star[,inter.terms[l]] = apply(X.star[,inter.vars[[l]]],1,prod)
@@ -156,11 +152,7 @@ ecomemGLMMCMC = function(x){
               tmp = exp(bf[[i]]$H%*%eta.star)
               w.star = as.numeric(tmp/sum(tmp))
               X.star = X
-              # if (var.type[i]=="C"){
               X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
-              # } else {
-              #   X.star[,mem.vars[i]] = wtD(x.lag[[i]],w.star)
-              # }
               if (inter==TRUE){
                 for (l in 1:length(inter.vars)){
                   X.star[,inter.terms[l]] = apply(X.star[,inter.vars[[l]]],1,prod)
