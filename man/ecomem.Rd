@@ -221,8 +221,7 @@ data = data.frame(time=1:TT,x=x,y=y)
 
 ## Run ecomem function
 
-mod = ecomem(y~x,data=data,mem.vars="x",var.type="D",
-      L=L,timeID="time")
+mod = ecomem(y~x,data=data,mem.vars="x",L=L,timeID="time")
 
 ## Assess model convergence
 
