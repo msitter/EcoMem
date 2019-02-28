@@ -131,7 +131,8 @@ ecomemMCMC = function(x){
           X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
           if (inter==TRUE){
             for (l in 1:length(inter.vars)){
-              X.star[,inter.terms[l]] = apply(X.star[,inter.vars[[l]]],1,prod)
+              X.star[,inter.terms[l]] =
+                X.star[,inter.vars[[l]][1]]*X.star[,inter.vars[[l]][2]]
             }
           }
           if (any(is.nan(w.star))){
@@ -162,7 +163,8 @@ ecomemMCMC = function(x){
               X.star[,mem.vars[i]] = x.lag[[i]]%*%w.star
               if (inter==TRUE){
                 for (l in 1:length(inter.vars)){
-                  X.star[,inter.terms[l]] = apply(X.star[,inter.vars[[l]]],1,prod)
+                  X.star[,inter.terms[l]] =
+                    X.star[,inter.vars[[l]][1]]*X.star[,inter.vars[[l]][2]]
                 }
               }
               if (any(is.nan(w.star))){
