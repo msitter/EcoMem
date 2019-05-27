@@ -97,11 +97,12 @@ ecomem = function(formula,data,mem.vars,
     names(smooth) = mem.vars
   }
 
-  # Define groups
+  # Define groups and order data
   if (is.na(groupID)){
     data$groupID = rep(1,nrow(data))
     groupID = "groupID"
   }
+  data = data[order(data[,groupID],data[,timeID]),]
   group = data[,groupID]
   group.idx = sort(unique(group))
   n.group = length(group.idx)
@@ -152,7 +153,6 @@ ecomem = function(formula,data,mem.vars,
 
   }
 
-  data = data[order(data[,groupID],data[,timeID]),]
   scaled.X = scale(data[,c(mem.vars.C,aux.vars.C)])
   if (dim(scaled.X)[2]==1){
     data[,c(mem.vars.C,aux.vars.C)] = as.numeric(scaled.X)

@@ -83,15 +83,6 @@ ecomemGLM = function(formula,family="binomial",data,
 
   p.mem = length(mem.vars)
 
-  # Define offset
-  if(!is.null(offset)){
-    if(!isTRUE(is.character(offset))){stop("offset must be a character")}
-    if(!offset%in%names(data)){stop("offset must refer to a data variable")}
-    offset = data[,offset]
-  } else {
-    offset = rep(1,nrow(data))
-  }
-
   # Check L input
   if(missing(L)){stop("L must be specified")}
   check.L = length(L)
@@ -114,14 +105,24 @@ ecomemGLM = function(formula,family="binomial",data,
     names(smooth) = mem.vars
   }
 
-  # Define groups
+  # Define groups and order data
   if (is.na(groupID)){
     data$groupID = rep(1,nrow(data))
     groupID = "groupID"
   }
+  data = data[order(data[,groupID],data[,timeID]),]
   group = data[,groupID]
   group.idx = sort(unique(group))
   n.group = length(group.idx)
+  
+  # Define offset
+  if(!is.null(offset)){
+    if(!isTRUE(is.character(offset))){stop("offset must be a character")}
+    if(!offset%in%names(data)){stop("offset must refer to a data variable")}
+    offset = data[,offset]
+  } else {
+    offset = rep(1,nrow(data))
+  }
 
   # Assign variable types to covariates
   aux.vars = main[!main%in%mem.vars]
@@ -169,7 +170,6 @@ ecomemGLM = function(formula,family="binomial",data,
 
   }
 
-  data = data[order(data[,groupID],data[,timeID]),]
   scaled.X = scale(data[,c(mem.vars.C,aux.vars.C)])
   if (dim(scaled.X)[2]==1){
     data[,c(mem.vars.C,aux.vars.C)] = as.numeric(scaled.X)
