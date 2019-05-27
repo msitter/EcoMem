@@ -147,9 +147,13 @@ ecomem = function(formula,data,mem.vars,
       return(d)
     }))
 
-    inter.vars = lapply(1:length(inter.terms),function(i){
-      unlist(strsplit(inter.terms[i],":"))
-    })
+    if (!is.null(inter.terms)){
+      inter.vars = lapply(1:length(inter.terms),function(i){
+        unlist(strsplit(inter.terms[i],":"))
+      })
+    } else {
+      inter = FALSE
+    }
 
   }
 
@@ -475,7 +479,7 @@ ecomem = function(formula,data,mem.vars,
                  pred.vars=pred.vars,
                  mem.vars=mem.vars)
     } else {
-      out = list(post.samps=mod.out[[1]],data=mod.data,n=n,
+      out = list(post.samps=mod.out,data=mod.data,n=n,
                  pred.vars=pred.vars,
                  mem.vars=mem.vars)
     }

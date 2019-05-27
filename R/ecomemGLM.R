@@ -164,9 +164,13 @@ ecomemGLM = function(formula,family="binomial",data,
       return(d)
     }))
 
-    inter.vars = lapply(1:length(inter.terms),function(i){
-      unlist(strsplit(inter.terms[i],":"))
-    })
+    if (!is.null(inter.terms)){
+      inter.vars = lapply(1:length(inter.terms),function(i){
+        unlist(strsplit(inter.terms[i],":"))
+      })
+    } else {
+      inter = FALSE
+    }
 
   }
 
@@ -515,7 +519,7 @@ ecomemGLM = function(formula,family="binomial",data,
                  pred.vars=pred.vars,
                  mem.vars=mem.vars)
     } else {
-      out = list(post.samps=mod.out[[1]],data=mod.data,n=n,
+      out = list(post.samps=mod.out,data=mod.data,n=n,
                  pred.vars=pred.vars,
                  mem.vars=mem.vars)
     }
